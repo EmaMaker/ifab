@@ -1,3 +1,5 @@
 piper-tts
 sounddevice
 argcomplete
+requests
+websocket-client

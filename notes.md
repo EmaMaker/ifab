@@ -62,6 +62,6 @@ Facilmente, via websockets con lo stream url contenuto nella risposta dell'apert
 ```python3 -m websockets URL```
 
 ## TTS Alfano
-python test-scripts/tts-compare.py --model ./tts-model/it_IT-paola-medium.onnx
-
+`python test-scripts/tts-compare.py --model ./tts-model/it_IT-paola-medium.onnx
+`
 
