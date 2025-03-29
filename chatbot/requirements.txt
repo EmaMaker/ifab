@@ -3,3 +3,7 @@ sounddevice
 argcomplete
 requests
 websocket-client
+numpy
+opencv-python
+matplotlib
+cv2_enumerate_cameras
