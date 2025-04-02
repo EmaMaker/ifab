@@ -9,6 +9,7 @@ from textwrap import indent
 import requests
 import websocket
 
+
 # Configuration
 url = "https://europe.directline.botframework.com/v3/directline/conversations"
 headers = {
@@ -16,6 +17,8 @@ headers = {
     "Content-Type": "application/json"
 }
 
+wrapper = TextWrapper(width=150)
+USER_ID = "user1"  # User ID for the conversation
 
 class StyleBox(Enum):
     Double = auto()  # ══════════
@@ -77,7 +80,7 @@ class IfabChatWebSocket:
             if 'activities' in data and data['activities']:
                 for activity in data['activities']:
                     # Only process messages from the bot
-                    if activity.get('from', {}).get('id') != 'user1' and activity.get('type') == 'message':
+                    if activity.get('from', {}).get('id') != USER_ID and activity.get('type') == 'message':
                         # Stop the animation before printing the response
                         self.stop_animation = True
                         if self.animation_thread and self.animation_thread.is_alive():
@@ -86,9 +89,10 @@ class IfabChatWebSocket:
                         # Clear the current line and print the bot's response
                         sys.stdout.write('\r' + ' ' * 50 + '\r')
                         print("Copilot:")
-                        wrapper = TextWrapper(width=120)
-                        wrapped_text = wrapper.fill(activity.get('text', ''))
-                        print(indent(create_box(wrapped_text, StyleBox.Bold), "  "))
+                        wrapped_text = []
+                        for line in activity.get('text', '').splitlines():
+                            wrapped_text.extend(wrapper.wrap(line))
+                        print(indent(create_box("\n".join(wrapped_text), StyleBox.Bold), "  "))
                         self.waiting_for_response = False
 
                     # Update watermark
@@ -172,7 +176,7 @@ class IfabChatWebSocket:
             "locale": "it-IT",
             "type": "message",
             "from": {
-                "id": "user1"
+                "id": USER_ID
             },
             "text": text
         }
@@ -232,6 +236,11 @@ if __name__ == '__main__':
     try:
         print("Chat started. Type 'exit', 'quit', or 'esci' to end the conversation.")
         while True:
+            if not chat.running:
+                print("WebSocket connection lost. Attempting to reconnect...")
+                if not chat.start_conversation():
+                    print("Failed to reconnect")
+                    break
             # Only show the input prompt when not waiting for a response
             if not chat.waiting_for_response:
                 user_input = input("Tu: ")
