@@ -39,9 +39,11 @@ def send_message():
     if not chat_client.running and not chat_client.start_conversation():
         return jsonify({'success': False, 'error': 'Failed to start conversation'}), 500
     
-    # Invia il messaggio al bot
-    if not chat_client.send_message(text):
-        return jsonify({'success': False, 'error': 'Failed to send message'}), 500
+    # Invia il messaggio al bot in un thread separato per non bloccare la risposta HTTP
+    def send_message_thread():
+        chat_client.send_message(text)
+    
+    threading.Thread(target=send_message_thread).start()
     
     return jsonify({'success': True})
 
@@ -62,15 +64,14 @@ def send_audio():
     if not chat_client.running and not chat_client.start_conversation():
         return jsonify({'success': False, 'error': 'Failed to start conversation'}), 500
     
-    # Invia il messaggio audio al bot
-    # Nota: in una implementazione reale, qui dovresti convertire l'audio in testo
-    # e poi inviare il testo al bot
-    if not chat_client.send_message("[Messaggio audio ricevuto - Conversione speech-to-text non ancora implementata]"):
-        return jsonify({'success': False, 'error': 'Failed to send audio message'}), 500
+    # Invia il messaggio audio al bot in un thread separato
+    def send_audio_thread():
+        chat_client.send_message("[Messaggio audio ricevuto - Conversione speech-to-text non ancora implementata]")
+        # Rimuovi il file temporaneo dopo l'invio
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
     
-    # Rimuovi il file temporaneo
-    if os.path.exists(temp_path):
-        os.remove(temp_path)
+    threading.Thread(target=send_audio_thread).start()
     
     return jsonify({'success': True})
 
@@ -98,7 +99,10 @@ def handle_disconnect():
 
 def message_callback(text):
     """Callback function for when a message is received from the bot"""
+    print(f"Sending message to clients: {text}")
     socketio.emit('message', {'type': 'message', 'text': text})
+    # Assicurati che il messaggio venga inviato immediatamente
+    socketio.sleep(0)
 
 
 def error_callback(error_text):
@@ -106,10 +110,10 @@ def error_callback(error_text):
     socketio.emit('message', {'type': 'error', 'text': error_text})
 
 
+# Registra i callback per gestire i messaggi e gli errori
+chat_client.add_message_callback(message_callback)
+chat_client.add_error_callback(error_callback)
+
 if __name__ == '__main__':
-    # Aggiungi i callback per gestire i messaggi e gli errori
-    chat_client.add_message_callback(message_callback)
-    chat_client.add_error_callback(error_callback)
-    
     # Avvia il server Flask con SocketIO
     socketio.run(app, host='0.0.0.0', port=8000, debug=True, allow_unsafe_werkzeug=True)

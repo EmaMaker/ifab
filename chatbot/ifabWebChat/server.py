@@ -52,10 +52,16 @@ class IfabChatWebSocket:
                 for activity in data['activities']:
                     # Only process messages from the bot
                     if activity.get('from', {}).get('id') != USER_ID and activity.get('type') == 'message':
+                        # Stampa il messaggio ricevuto per debug
+                        print(f"Bot message received: {activity.get('text', '')}")
+                        
                         # Notify all callbacks
                         for callback in self.message_callbacks:
                             callback(activity.get('text', ''))
+                        
+                        # Imposta waiting_for_response a False per fermare l'animazione
                         self.waiting_for_response = False
+                        print("Set waiting_for_response to False")
 
                     # Update watermark
                     if 'id' in activity:
