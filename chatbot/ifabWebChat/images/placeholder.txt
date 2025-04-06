@@ -1,0 +1,1 @@
+Questa cartella contiene le immagini utilizzate come sfondo per i pulsanti statici della chat.

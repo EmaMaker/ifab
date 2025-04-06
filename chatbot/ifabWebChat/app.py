@@ -13,6 +13,11 @@ app = Flask(__name__, static_folder='.')
 CORS(app)  # Abilita CORS per tutte le route
 socketio = SocketIO(app, cors_allowed_origins="*")
 
+# Aggiungi una route per servire le immagini statiche
+@app.route('/images/<path:filename>')
+def serve_image(filename):
+    return send_from_directory('images', filename)
+
 # Inizializza il client WebSocket per la comunicazione con il bot
 chat_client = IfabChatWebSocket()
 
@@ -20,10 +25,64 @@ chat_client = IfabChatWebSocket()
 active_connections = {}
 
 
+# Lista di pulsanti statici (testo, percorso_immagine)
+button_list = [
+    ("Aiuto", "images/The_Help_Logo.svg.png"),
+    ("Informazioni", "images/info.jpg"),
+    ("Comandi", "images/commands.jpg"),
+    ("Meteo", "images/weather.jpg"),
+    ("Notizie", "images/news.jpg"),
+    ("Musica", "images/music.jpg")
+]
+
 @app.route('/')
 def index():
     """Serve the main HTML page"""
-    return send_from_directory('.', 'index.html')
+    # Verifica l'esistenza dei file immagine
+    verified_buttons = []
+    for text, img_path in button_list:
+        # Se l'immagine esiste, usa il percorso, altrimenti imposta a None
+        full_path = os.path.join(os.path.dirname(__file__), img_path)
+        if os.path.exists(full_path):
+            verified_buttons.append((text, img_path))
+        else:
+            verified_buttons.append((text, None))
+    
+    # Leggi il contenuto del file HTML
+    with open(os.path.join(os.path.dirname(__file__), 'index.html'), 'r') as file:
+        html_content = file.read()
+    
+    # Dividi i pulsanti tra sinistra e destra
+    left_buttons = verified_buttons[:len(verified_buttons)//2]
+    right_buttons = verified_buttons[len(verified_buttons)//2:]
+    
+    # Crea HTML per i pulsanti di sinistra
+    left_html = ''
+    for text, img_path in left_buttons:
+        if img_path:
+            # Assicurati che il percorso dell'immagine inizi con '/'
+            if not img_path.startswith('/'):
+                img_path = '/' + img_path
+            left_html += f'<button class="static-btn" style="background-image: url(\'{img_path}\')">'+'<span>'+f'{text}'+'</span>'+'</button>\n'
+        else:
+            left_html += f'<button class="static-btn"><span>{text}</span></button>\n'
+    
+    # Crea HTML per i pulsanti di destra
+    right_html = ''
+    for text, img_path in right_buttons:
+        if img_path:
+            # Assicurati che il percorso dell'immagine inizi con '/'
+            if not img_path.startswith('/'):
+                img_path = '/' + img_path
+            right_html += f'<button class="static-btn" style="background-image: url(\'{img_path}\')">'+'<span>'+f'{text}'+'</span>'+'</button>\n'
+        else:
+            right_html += f'<button class="static-btn"><span>{text}</span></button>\n'
+    
+    # Sostituisci i placeholder nel template
+    html_content = html_content.replace('<!-- STATIC_BUTTONS_LEFT -->', left_html)
+    html_content = html_content.replace('<!-- STATIC_BUTTONS_RIGHT -->', right_html)
+    
+    return html_content
 
 
 @app.route('/send-message', methods=['POST'])
@@ -35,6 +94,15 @@ def send_message():
     
     text = data['text']
     
+    # Controlla se il messaggio proviene da un pulsante statico
+    is_button = False
+    for button_text, _ in button_list:
+        if text.strip() == button_text.strip():
+            is_button = True
+            # Stampa il testo del pulsante per debug
+            print(f"Pulsante premuto: {text}")
+            break
+    
     # Assicurati che la conversazione sia attiva
     if not chat_client.running and not chat_client.start_conversation():
         return jsonify({'success': False, 'error': 'Failed to start conversation'}), 500
@@ -44,6 +112,38 @@ def send_message():
         chat_client.send_message(text)
     
     threading.Thread(target=send_message_thread).start()
+    
+    return jsonify({'success': True})
+
+
+@app.route('/button-click', methods=['POST'])
+def button_click():
+    """Handle button click events"""
+    data = request.json
+    if not data or 'text' not in data:
+        return jsonify({'success': False, 'error': 'No text provided'}), 400
+    
+    button_text = data['text']
+    
+    # Verifica se il testo corrisponde a uno dei pulsanti statici
+    is_valid_button = False
+    for text, _ in button_list:
+        if button_text.strip() == text.strip():
+            is_valid_button = True
+            break
+    
+    if not is_valid_button:
+        return jsonify({'success': False, 'error': 'Invalid button text'}), 400
+    
+    # Stampa il testo del pulsante nel server per debug
+    print(f"Pulsante premuto: {button_text}")
+    
+    # Assicurati che la conversazione sia attiva
+    if not chat_client.running and not chat_client.start_conversation():
+        return jsonify({'success': False, 'error': 'Failed to start conversation'}), 500
+    
+    # In futuro, qui si può aggiungere la logica per gestire diversi tipi di pulsanti
+    # Per ora, inviamo solo il testo al backend senza mostrarlo nella chat
     
     return jsonify({'success': True})
 
