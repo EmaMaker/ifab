@@ -1,7 +1,4 @@
 import json
-import os
-import socketserver
-import sys
 import threading
 import time
 
@@ -10,8 +7,10 @@ import websocket
 
 from util import *
 
+
 class IfabChatWebSocket:
     """ Class to manage WebSocket connection to the Ifab Chatbot API and the backend"""
+
     def __init__(self, url, auth_token, user_id="user1", port=8000):
         # Connection parameters
         self.url = url
@@ -50,9 +49,9 @@ class IfabChatWebSocket:
             if 'activities' in data and data['activities']:
                 for activity in data['activities']:
                     # Only process messages from the bot
-                    if activity.get('from', {}).get('id') != self.user_id and activity.get('type') == 'message':
+                    if activity.get('from', {}).get('id') != self.user_id and activity.get('type') == 'message' and activity.get('text') is not None:
                         # Stampa il messaggio ricevuto per debug
-                        messageBox("Copilot", activity.get('text', ''))
+                        messageBox("Copilot", activity.get('text', 'no-text'))
 
                         # Notify all callbacks
                         for callback in self.message_callbacks:
@@ -196,14 +195,14 @@ class IfabChatWebSocket:
             print("No audio data provided")
             return False
         print("Audio data received")
-        
+
         # Estrai l'ID del messaggio dal percorso del file se non fornito
         if not message_id and audio_path:
             # Prova a estrarre un ID dal nome del file audio
             filename = os.path.basename(audio_path)
             if filename.startswith('audio_'):
                 message_id = 'audio_' + filename.split('_')[1].split('.')[0]
-        
+
         # Avvia un thread separato per simulare l'elaborazione della trascrizione
         def transcription_thread(audio_path, message_id):
             # Qui in futuro si implementerà l'analisi STT reale
@@ -216,12 +215,11 @@ class IfabChatWebSocket:
             time.sleep(2)
             for callback in self.message_callbacks:
                 callback(f"Messaggio audio non ancora supportato:\n{message_id}")
-        
+
         # Avvia il thread di trascrizione
         if audio_path:
             threading.Thread(target=transcription_thread, args=(audio_path, message_id)).start()
             return True
-        
 
     def close(self):
         """Close the WebSocket connection"""
@@ -230,4 +228,3 @@ class IfabChatWebSocket:
             self.running = False
             if self.ws_thread and self.ws_thread.is_alive():
                 self.ws_thread.join(timeout=1)
-

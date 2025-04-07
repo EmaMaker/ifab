@@ -1,6 +1,7 @@
 import os
 from enum import Enum, auto
 from textwrap import TextWrapper, indent
+import traceback
 
 
 class StyleBox(Enum):
@@ -41,12 +42,20 @@ def create_box(string, styleName: StyleBox = StyleBox.Double) -> str:
     return box
 
 
-wrapper = TextWrapper(width=(os.get_terminal_size().columns if os.get_terminal_size().columns else 120) - 10)
+try:
+    termSize = os.get_terminal_size()
+    size = termSize.columns
+except OSError:
+    size = 120
+
+wrapper = TextWrapper(width=size - 10)
 
 
 def messageBox(who, text, style=StyleBox.Bold):
     print(f"{who}:")
     wrapped_text = []
+    if not text:
+        text = f"Call without text, stack trace: {traceback.format_exc()}"
     for line in text.splitlines():
         wrapped_text.extend(wrapper.wrap(line))
     print(indent(create_box("\n".join(wrapped_text), style), "  "))
