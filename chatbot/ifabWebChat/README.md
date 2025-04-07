@@ -12,8 +12,8 @@ Un'interfaccia web locale che permette di scrivere o registrare messaggi vocali 
 
 ## Struttura del Progetto
 
-- `app.py`: Server Flask che gestisce le richieste HTTP e WebSocket
-- `server.py`: Implementazione della comunicazione con il bot tramite WebSocket
+- `flaskFrontEnd.py`: Server Flask che gestisce le richieste con il backend attraverso WebSocket
+- `ifabChatWebSocket.py`: Implementazione della comunicazione con il bot tramite WebSocket
 - `index.html`: Interfaccia utente web
 
 ## Requisiti
@@ -60,4 +60,3 @@ python flaskFrontEnd.py
 - Implementare la conversione speech-to-text completa
 - Aggiungere supporto per la sintesi vocale delle risposte del bot
 - Migliorare la gestione degli errori e la resilienza della connessione
-- Aggiungere supporto per l'invio di immagini e altri tipi di media
