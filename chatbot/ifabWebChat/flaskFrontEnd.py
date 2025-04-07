@@ -12,14 +12,23 @@ from ifabChatWebSocket import IfabChatWebSocket
 # Dizionario per tenere traccia delle connessioni socket attive
 active_connections = {}
 
+"""
+Flask WebSocket server per la comunicazione con il bot 
+@param url:                 URL del bot
+@param auth:                Token di autenticazione per il bot
+@param button_list_dx/sx:   Lista di tuple contenenti il testo e il percorso dell'immagine per i pulsanti statici
+                            [(text, image_path), ...]
+"""
 
-def create_app(url, auth, button_list) -> tuple[Flask, SocketIO, IfabChatWebSocket]:
+
+def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list_dx: tuple[str, str]) -> tuple[Flask, SocketIO, IfabChatWebSocket]:
     """Crea e restituisce l'istanza dell'app Flask, socketio e client WebSocket, con tutti i callback"""
 
     chat_client = IfabChatWebSocket(url, auth)  # Inizializza il client WebSocket verso il bot
     app = Flask(__name__, static_folder='.')  # Creo l'istanza dell'app Flask e imposto la cartella statica
     CORS(app)  # Abilita CORS per tutte le route
     socketio = SocketIO(app, cors_allowed_origins="*")  # Inizializza SocketIO con CORS abilitato tra il backend python ed il frontend Flask
+    button_list = button_list_dx + button_list_sx  # Unisco le liste di pulsanti
 
     # Aggiungi una route per servire le immagini statiche
     @app.route('/images/<path:filename>')
@@ -40,49 +49,42 @@ def create_app(url, auth, button_list) -> tuple[Flask, SocketIO, IfabChatWebSock
     @app.route('/')
     def index():
         """Serve the main HTML page"""
-        # Verifica l'esistenza dei file immagine
-        verified_buttons = []
-        for text, img_path in button_list:
-            # Se l'immagine esiste, usa il percorso, altrimenti imposta a None
-            full_path = os.path.join(os.path.dirname(__file__), img_path)
-            if os.path.exists(full_path):
-                verified_buttons.append((text, img_path))
-            else:
-                verified_buttons.append((text, None))
 
+        # Verifica l'esistenza dei file immagine
+        def verify_buttons(button_list):
+            verified_buttons = []
+            for text, img_path in button_list:
+                # Se l'immagine esiste, usa il percorso, altrimenti imposta a None
+                full_path = os.path.join(os.path.dirname(__file__), img_path)
+                if os.path.exists(full_path):
+                    verified_buttons.append((text, img_path))
+                else:
+                    verified_buttons.append((text, None))
+            return verified_buttons
+
+        right_buttons = verify_buttons(button_list_dx)
+        left_buttons = verify_buttons(button_list_sx)
+
+        # Crea HTML per i pulsanti di sinistra
         # Leggi il contenuto del file HTML
         with open(os.path.join(os.path.dirname(__file__), 'index.html'), 'r') as file:
             html_content = file.read()
 
-        # Dividi i pulsanti tra sinistra e destra
-        left_buttons = verified_buttons[:len(verified_buttons) // 2]
-        right_buttons = verified_buttons[len(verified_buttons) // 2:]
-
-        # Crea HTML per i pulsanti di sinistra
-        left_html = ''
-        for text, img_path in left_buttons:
-            if img_path:
-                # Assicurati che il percorso dell'immagine inizi con '/'
-                if not img_path.startswith('/'):
-                    img_path = '/' + img_path
-                left_html += f'<button class="static-btn" style="background-image: url(\'{img_path}\')">' + '<span>' + f'{text}' + '</span>' + '</button>\n'
-            else:
-                left_html += f'<button class="static-btn"><span>{text}</span></button>\n'
-
-        # Crea HTML per i pulsanti di destra
-        right_html = ''
-        for text, img_path in right_buttons:
-            if img_path:
-                # Assicurati che il percorso dell'immagine inizi con '/'
-                if not img_path.startswith('/'):
-                    img_path = '/' + img_path
-                right_html += f'<button class="static-btn" style="background-image: url(\'{img_path}\')">' + '<span>' + f'{text}' + '</span>' + '</button>\n'
-            else:
-                right_html += f'<button class="static-btn"><span>{text}</span></button>\n'
+        def mkHTMLbutton(buttons):
+            html = ''
+            for text, img_path in buttons:
+                if img_path:
+                    # Assicurati che il percorso dell'immagine inizi con '/'
+                    if not img_path.startswith('/'):
+                        img_path = '/' + img_path
+                    html += f'<button class="static-btn" style="background-image: url(\'{img_path}\')">' + '<span>' + f'{text}' + '</span>' + '</button>\n'
+                else:
+                    html += f'<button class="static-btn"><span>{text}</span></button>\n'
+            return html
 
         # Sostituisci i placeholder nel template
-        html_content = html_content.replace('<!-- STATIC_BUTTONS_LEFT -->', left_html)
-        html_content = html_content.replace('<!-- STATIC_BUTTONS_RIGHT -->', right_html)
+        html_content = html_content.replace('<!-- STATIC_BUTTONS_LEFT -->', mkHTMLbutton(left_buttons))
+        html_content = html_content.replace('<!-- STATIC_BUTTONS_RIGHT -->', mkHTMLbutton(right_buttons))
 
         return html_content
 
@@ -236,16 +238,18 @@ if __name__ == '__main__':
     auth = "Bearer Ec99xFUkF1i7cR8m5TLtPokIlKXvLNdCxIYyDsraweBmf2zltwUZJQQJ99BCACi5YpzAArohAAABAZBSECEz.IpVjYOfmWMOQOHYGdH4G16pGKUArN1pEpAGJebfBjSrKI71E6ZhDJQQJ99BCACi5YpzAArohAAABAZBSMCrh"
 
     # Lista di pulsanti statici (testo, percorso_immagine)
-    button_list = [
-        ("Aiuto", "images/The_Help_Logo.svg.png"),
-        ("Informazioni", "images/info.jpg"),
-        ("Comandi", "images/commands.jpg"),
-        ("Meteo", "images/weather.jpg"),
-        ("Notizie", "images/news.jpg"),
-        ("Musica", "images/music.jpg")
+    button_sx = [
+        ("Zona saldatura", "images/The_Help_Logo.svg.png"),
+        ("Zona debug", "images/weather.jpg"),
+        ("Zona prototipazione", "images/news.jpg"),
     ]
-
-    app, socketio, chat_client = create_app(url, auth, button_list)  # Crea l'app Flask e SocketIO
+    button_dx = [
+        ("Tagliatrice Laser", "images/info.jpg"),
+        ("Stampante 3D", "images/commands.jpg"),
+        ("CNC", "images/music.jpg"),
+        ("Stampante Plotter", "images/info.jpg"),
+    ]
+    app, socketio, chat_client = create_app(url, auth, button_sx, button_dx)  # Crea l'app Flask e SocketIO
 
     # Avvia il server Flask con SocketIO
     socketio.run(app, host=args.host, port=args.port, debug=True, allow_unsafe_werkzeug=True)  # Avvia il server Flask con SocketIO

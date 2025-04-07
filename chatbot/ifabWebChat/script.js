@@ -69,18 +69,9 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // Show loading animation
-    function showLoading(isButtonClick = false) {
+    function showLoading(msg = 'In attesa di risposta') {
         isWaitingForResponse = true;
-
-        if (isButtonClick) {
-            // Versione più breve per i pulsanti statici
-            statusElement.innerHTML = '<div class="loading-animation"><div></div><div></div><div></div><div></div></div> Comando inviato...';
-        } else {
-            // Versione standard per messaggi e registrazioni
-            statusElement.innerHTML = '<div class="loading-animation"><div></div><div></div><div></div><div></div></div> In attesa di risposta...';
-        }
-
-        sendButton.disabled = true;
+statusElement.innerHTML = `<div class="loading-animation"><div></div><div></div><div></div><div></div></div> ${msg}...`;        sendButton.disabled = true;
         recordButton.disabled = true;
 
         // Disabilita i pulsanti statici
@@ -377,7 +368,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const buttonText = this.querySelector('span').textContent;
 
             // Invia il testo del pulsante al server
-            showLoading(true);             // Mostra l'animazione di caricamento temporanea per i pulsanti
+            showLoading(`Dirigiti alla ${buttonText}`);             // Mostra l'animazione di caricamento temporanea per i pulsanti
             fetch('/button-click', {
                 method: 'POST',
                 headers: {
