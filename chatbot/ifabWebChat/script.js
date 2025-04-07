@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', function () {
     socket.on('stt', function (data) {
         // Aggiorna il messaggio specifico usando l'ID fornito dal backend
         updateAudioMessage(data.messageId, data.text);
-        hideLoading();
+        // hideLoading();
     });
 
     // Gestisci gli errori di connessione
@@ -465,9 +465,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
 // Event listeners
     messageInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            sendTextMessage(messageInput.value.trim());
+        if (e.key === 'Enter') {
+            if (e.shiftKey) {
+                // Permette l'inserimento di una nuova riga
+                return;
+            } else {
+                e.preventDefault();
+                sendTextMessage(messageInput.value.trim());
+            }
         }
     });
 

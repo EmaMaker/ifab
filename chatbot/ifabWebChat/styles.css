@@ -258,6 +258,7 @@ h1 {
     max-width: 80%;
     width: fit-content;
     word-wrap: break-word;
+    white-space: pre-wrap;
     display: inline-block;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
@@ -337,6 +338,7 @@ h1 {
     bottom: 0;
     width: 100%;
     z-index: 10;
+    margin-top: auto;
 }
 
 .text-input {

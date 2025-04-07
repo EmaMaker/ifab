@@ -208,12 +208,14 @@ class IfabChatWebSocket:
         def transcription_thread(audio_path, message_id):
             # Qui in futuro si implementerà l'analisi STT reale
             # Per ora restituiamo un messaggio fisso come richiesto
-            stt_text = "analisi audio STT completata"
             # Attendi 3 secondi come richiesto
-            time.sleep(3)
+            time.sleep(1)
             # Invia la trascrizione con l'ID del messaggio
             for callback in self.message_callbacks:
-                callback(f"Trascrizione: {stt_text}", message_id)
+                callback(f"Trascrizione del messaggio, Mock", message_id)
+            time.sleep(2)
+            for callback in self.message_callbacks:
+                callback(f"Messaggio audio non ancora supportato:\n{message_id}")
         
         # Avvia il thread di trascrizione
         if audio_path:
