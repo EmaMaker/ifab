@@ -65,6 +65,36 @@
     margin-top: 5px;
 }
 
+/* Stili per il contenuto Markdown nei messaggi del bot */
+.bot-message {
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.bot-message ul, .bot-message ol {
+    padding-left: 20px;
+    margin: 5px 0;
+}
+
+.bot-message p {
+    margin: 5px 0;
+}
+
+.bot-message strong {
+    font-weight: bold;
+}
+
+.bot-message em {
+    font-style: italic;
+}
+
+.bot-message code {
+    background-color: rgba(0, 0, 0, 0.05);
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-family: monospace;
+}
+
 /* Animazione di caricamento all'interno dei messaggi audio */
 .audio-transcription .loading-animation {
     display: inline-flex;

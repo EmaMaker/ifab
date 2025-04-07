@@ -59,11 +59,12 @@ document.addEventListener('DOMContentLoaded', function () {
         chatContainer.scrollTop = chatContainer.scrollHeight;
     }
 
-    // Add a bot message to the chat
+    // Add a bot message to the chat with Markdown support
     function addBotMessage(text) {
         const messageDiv = document.createElement('div');
         messageDiv.className = 'message bot-message';
-        messageDiv.textContent = text;
+        // Utilizziamo marked per convertire il testo Markdown in HTML
+        messageDiv.innerHTML = marked.parse(text);
         messageContainer.appendChild(messageDiv);
         chatContainer.scrollTop = chatContainer.scrollHeight;
     }
@@ -464,10 +465,11 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
 // Event listeners
-    messageInput.addEventListener('keypress', (e) => {
+    messageInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             if (e.shiftKey) {
-                // Permette l'inserimento di una nuova riga
+                // Permette l'inserimento di una nuova riga quando si preme Shift+Invio
+                // Non facciamo nulla, lasciando che il comportamento predefinito inserisca una nuova riga
                 return;
             } else {
                 e.preventDefault();
