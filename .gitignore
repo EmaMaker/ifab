@@ -5,7 +5,8 @@ robot/.vscode/launch.json
 robot/.vscode/ipch
 
 **/__pycache__/
-.env/
+**/ .env/
+**/ .env
 .idea/
 /venv/
 **.DS_Store
