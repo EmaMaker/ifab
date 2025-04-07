@@ -3,8 +3,7 @@ import sys
 import threading
 import time
 from enum import Enum, auto
-from textwrap import TextWrapper
-from textwrap import indent
+from textwrap import TextWrapper, indent
 
 import requests
 import websocket
@@ -88,11 +87,7 @@ class IfabChatWebSocket:
 
                         # Clear the current line and print the bot's response
                         sys.stdout.write('\r' + ' ' * 50 + '\r')
-                        print("Copilot:")
-                        wrapped_text = []
-                        for line in activity.get('text', '').splitlines():
-                            wrapped_text.extend(wrapper.wrap(line))
-                        print(indent(create_box("\n".join(wrapped_text), StyleBox.Bold), "  "))
+                        messageBox("Copilot response:",activity.get('text', ''))
                         self.waiting_for_response = False
 
                     # Update watermark

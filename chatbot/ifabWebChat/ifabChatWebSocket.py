@@ -197,29 +197,42 @@ class IfabChatWebSocket:
             print("No audio data provided")
             return False
         print("Audio data received")
-        # TODO: Capire se l'STT lo farà il bot o noi con wisper o simili
-        if audio_path:
+        
+        # Estrai l'ID del messaggio dal percorso del file se non fornito
+        if not message_id and audio_path:
+            # Prova a estrarre un ID dal nome del file audio
+            filename = os.path.basename(audio_path)
+            if filename.startswith('audio_'):
+                message_id = 'audio_' + filename.split('_')[1].split('.')[0]
+        
+        # Avvia un thread separato per simulare l'elaborazione della trascrizione
+        def transcription_thread(audio_path, message_id):
+            # Attendi 3 secondi come richiesto
+            time.sleep(3)
+            
             # Qui in futuro si implementerà l'analisi STT reale
             # Per ora restituiamo un messaggio fisso come richiesto
-            stt_text = "analisi audio STT"
-            # Invia sia il messaggio audio che il testo analizzato, includendo l'ID del messaggio
+            stt_text = "analisi audio STT completata"
+            
+            # Invia la trascrizione con l'ID del messaggio
             for callback in self.message_callbacks:
-                # Estrai l'ID del messaggio dal percorso del file se non fornito
-                if not message_id:
-                    # Prova a estrarre un ID dal nome del file audio
-                    filename = os.path.basename(audio_path)
-                    if filename.startswith('audio_'):
-                        message_id = 'audio_' + filename.split('_')[1].split('.')[0]
-                
-                # Invia la trascrizione con l'ID del messaggio
                 callback(f"Trascrizione: {stt_text}", message_id)
+        
+        # Avvia il thread di trascrizione
+        if audio_path:
+            threading.Thread(target=transcription_thread, args=(audio_path, message_id)).start()
             return True
+        
         if audio_data:
-            # Here you would process the audio data
-            # For now, we'll just send a placeholder message
-            stt_text = "analisi audio STT"
-            for callback in self.message_callbacks:
-                callback(f"Trascrizione: {stt_text}", message_id)
+            # Here you would process the audio data in a similar thread
+            # For now, we'll just send a placeholder message after delay
+            def audio_data_thread(message_id):
+                time.sleep(3)
+                stt_text = "analisi audio STT completata"
+                for callback in self.message_callbacks:
+                    callback(f"Trascrizione: {stt_text}", message_id)
+            
+            threading.Thread(target=audio_data_thread, args=(message_id,)).start()
             return True
 
     def close(self):

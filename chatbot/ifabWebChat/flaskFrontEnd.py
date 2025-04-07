@@ -223,7 +223,7 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
 
     def message_callback(text, message_id=None):
         """Callback function for when a message is received from the bot"""
-        messageBox("Send to client", text)
+        messageBox("Send to client", text, StyleBox.Dash_Light)
         # Includi l'ID del messaggio se disponibile
         message_data = {'type': 'message', 'text': text}
         if message_id:

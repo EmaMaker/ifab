@@ -129,8 +129,8 @@ document.addEventListener('DOMContentLoaded', function () {
         loadingAnimation.className = 'loading-animation';
         loadingAnimation.innerHTML = '<div></div><div></div><div></div><div></div>';
         textSpan.appendChild(loadingAnimation);
-        textSpan.appendChild(document.createTextNode(' Trascrizione in corso...'));
-
+        textSpan.appendChild(document.createTextNode('Trascrizione in corso'));
+        textSpan.appendChild(loadingAnimation);
         
         // Aggiungi gli elementi al contenitore
         audioContainer.appendChild(playButton);
@@ -186,14 +186,29 @@ document.addEventListener('DOMContentLoaded', function () {
         if (messageDiv) {
             const textSpan = messageDiv.querySelector('.audio-transcription');
             if (textSpan) {
-                // Rimuovi l'animazione di caricamento
-                const loadingAnimation = textSpan.querySelector('.loading-animation');
-                if (loadingAnimation) {
-                    loadingAnimation.remove();
+                // Trova e rimuovi solo l'animazione di caricamento e il testo "Trascrizione in corso..."
+                const animationContainer = textSpan.querySelector('div');
+                if (animationContainer) {
+                    animationContainer.remove();
                 }
                 
-                // Aggiorna il testo
-                textSpan.innerHTML = text;
+                // Mantieni il testo "🎤 Messaggio audio registrato" e aggiungi la trascrizione
+                if (text.startsWith('Trascrizione:')) {
+                    // Assicurati che ci sia il testo del messaggio audio
+                    if (!textSpan.textContent.includes('🎤 Messaggio audio registrato')) {
+                        textSpan.innerHTML = '🎤 Messaggio audio registrato<br>';
+                    } else {
+                        // Rimuovi eventuali elementi rimanenti dopo il testo principale
+                        textSpan.innerHTML = '🎤 Messaggio audio registrato<br>';
+                    }
+                    
+                    // Aggiungi la trascrizione come testo normale
+                    textSpan.innerHTML += text;
+                } else {
+                    // Se non è una trascrizione, sostituisci tutto il contenuto
+                    textSpan.innerHTML = text;
+                }
+                
                 chatContainer.scrollTop = chatContainer.scrollHeight;
             }
         }
@@ -399,8 +414,33 @@ document.addEventListener('DOMContentLoaded', function () {
                                 audioMessages[messageId] = data.file_path;
                             }
                             
-                            // Mostra un messaggio temporaneo
-                            updateAudioMessage(data.message_id || messageId, '🎤 Messaggio audio registrato');
+                            // Mostra un messaggio temporaneo con l'animazione di caricamento
+                            const messageElement = document.querySelector(`.message[data-message-id="${data.message_id || messageId}"]`);
+                            if (messageElement) {
+                                const textSpan = messageElement.querySelector('.audio-transcription');
+                                if (textSpan) {
+                                    // Rimuovi il contenuto precedente
+                                    textSpan.innerHTML = '';
+                                    
+                                    // Aggiungi il testo del messaggio audio
+                                    textSpan.appendChild(document.createTextNode('🎤 Messaggio audio registrato'));
+                                    
+                                    // Aggiungi l'animazione di caricamento sotto il testo
+                                    const loadingAnimation = document.createElement('div');
+                                    loadingAnimation.className = 'loading-animation';
+                                    loadingAnimation.innerHTML = '<div></div><div></div><div></div><div></div>';
+                                    
+                                    // Crea un contenitore per l'animazione
+                                    const animationContainer = document.createElement('div');
+                                    animationContainer.style.display = 'block';
+                                    animationContainer.style.marginTop = '5px';
+                                    animationContainer.appendChild(loadingAnimation);
+                                    animationContainer.appendChild(document.createTextNode(' Trascrizione in corso...'));
+                                    
+                                    textSpan.appendChild(document.createElement('br'));
+                                    textSpan.appendChild(animationContainer);
+                                }
+                            }
                         }
                         // The response will be handled by the WebSocket connection
                     })

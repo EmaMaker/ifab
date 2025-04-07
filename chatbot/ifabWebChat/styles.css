@@ -61,6 +61,8 @@
 .audio-transcription {
     white-space: pre-wrap;
     word-break: break-word;
+    display: block;
+    margin-top: 5px;
 }
 
 /* Animazione di caricamento all'interno dei messaggi audio */

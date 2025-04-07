@@ -41,9 +41,9 @@ def create_box(string, styleName: StyleBox = StyleBox.Double) -> str:
 
 wrapper = TextWrapper(width=150)
 
-def messageBox(who, text):
+def messageBox(who, text, style=StyleBox.Bold):
     print(f"{who}:")
     wrapped_text = []
     for line in text.splitlines():
         wrapped_text.extend(wrapper.wrap(line))
-    print(indent(create_box("\n".join(wrapped_text), StyleBox.Bold), "  "))
+    print(indent(create_box("\n".join(wrapped_text), style), "  "))
