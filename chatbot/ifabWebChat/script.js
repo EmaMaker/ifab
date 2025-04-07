@@ -75,11 +75,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (isButtonClick) {
             // Versione più breve per i pulsanti statici
             statusElement.innerHTML = '<div class="loading-animation"><div></div><div></div><div></div><div></div></div> Comando inviato...';
-            
-            // Imposta un timer per nascondere automaticamente il loading dopo 1-2 secondi
-            setTimeout(() => {
-                hideLoading();
-            }, 1500); // 1.5 secondi
         } else {
             // Versione standard per messaggi e registrazioni
             statusElement.innerHTML = '<div class="loading-animation"><div></div><div></div><div></div><div></div></div> In attesa di risposta...';
@@ -382,6 +377,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const buttonText = this.querySelector('span').textContent;
             
             // Invia il testo del pulsante al server
+            showLoading(true);             // Mostra l'animazione di caricamento temporanea per i pulsanti
             fetch('/button-click', {
                 method: 'POST',
                 headers: {
@@ -402,12 +398,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     setTimeout(() => {
                         this.classList.remove('button-pressed');
                     }, 300);
-                    
-                    // Mostra l'animazione di caricamento temporanea per i pulsanti
-                    showLoading(true);
-                    
+
                     console.log('Comando inviato:', data.command);
-                }
+                    // Imposta un timer per nascondere automaticamente il loading dopo 1 secondi dalla conferma di ricezione
+                    setTimeout(() => {
+                        hideLoading();
+                    }, 1000); // 1 secondi
+                        }
             })
             .catch(error => {
                 console.error('Error:', error);

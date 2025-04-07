@@ -1,28 +1,26 @@
 import json
 import os
+import socketserver
 import sys
 import threading
 import time
-from enum import Enum, auto
-from http.server import HTTPServer, SimpleHTTPRequestHandler
-import socketserver
 
 import requests
 import websocket
 
-# Configuration
-url = "https://europe.directline.botframework.com/v3/directline/conversations"
-headers = {
-    "Authorization": "Bearer Ec99xFUkF1i7cR8m5TLtPokIlKXvLNdCxIYyDsraweBmf2zltwUZJQQJ99BCACi5YpzAArohAAABAZBSECEz.IpVjYOfmWMOQOHYGdH4G16pGKUArN1pEpAGJebfBjSrKI71E6ZhDJQQJ99BCACi5YpzAArohAAABAZBSMCrh",
-    "Content-Type": "application/json"
-}
-
-USER_ID = "user1"  # User ID for the conversation
-HTTP_PORT = 8000    # Port for the HTTP server
-
 
 class IfabChatWebSocket:
-    def __init__(self):
+    """ Class to manage WebSocket connection to the Ifab Chatbot API and the backend"""
+    def __init__(self, url, auth_token, user_id="user1", port=8000):
+        # Connection parameters
+        self.url = url
+        self.headers = {
+            "Authorization": auth_token,
+            "Content-Type": "application/json"
+        }
+        self.user_id = user_id
+        self.port = port
+        # State variables
         self.conversation_id = None
         self.ws = None
         self.ws_thread = None
@@ -51,14 +49,14 @@ class IfabChatWebSocket:
             if 'activities' in data and data['activities']:
                 for activity in data['activities']:
                     # Only process messages from the bot
-                    if activity.get('from', {}).get('id') != USER_ID and activity.get('type') == 'message':
+                    if activity.get('from', {}).get('id') != self.user_id and activity.get('type') == 'message':
                         # Stampa il messaggio ricevuto per debug
                         print(f"Bot message received: {activity.get('text', '')}")
-                        
+
                         # Notify all callbacks
                         for callback in self.message_callbacks:
                             callback(activity.get('text', ''))
-                        
+
                         # Imposta waiting_for_response a False per fermare l'animazione
                         self.waiting_for_response = False
                         print("Set waiting_for_response to False")
@@ -96,7 +94,7 @@ class IfabChatWebSocket:
         """Initialize a new conversation and connect to WebSocket"""
         try:
             # Start a new conversation
-            response = requests.post(url, headers=headers)
+            response = requests.post(self.url, headers=self.headers)
             if response.status_code != 201:
                 error_msg = f"Error starting conversation: {response.status_code}"
                 print(error_msg)
@@ -157,12 +155,12 @@ class IfabChatWebSocket:
                 callback(error_msg)
             return False
 
-        activity_url = f"{url}/{self.conversation_id}/activities"
+        activity_url = f"{self.url}/{self.conversation_id}/activities"
         body = {
             "locale": "it-IT",
             "type": "message",
             "from": {
-                "id": USER_ID
+                "id": self.user_id
             },
             "text": text
         }
@@ -172,7 +170,7 @@ class IfabChatWebSocket:
             self.waiting_for_response = True
 
             # Send the message
-            response = requests.post(activity_url, headers=headers, json=body)
+            response = requests.post(activity_url, headers=self.headers, json=body)
             if response.status_code != 200:
                 error_msg = f"Error sending message: {response.status_code}"
                 print(error_msg)
@@ -189,12 +187,22 @@ class IfabChatWebSocket:
             self.waiting_for_response = False
             return False
 
-    def send_audio_message(self, audio_data):
+    def send_audio_message(self, audio_path=None, audio_data=None):
         """Send an audio message to the bot for speech-to-text processing"""
         # This would typically involve sending the audio file to a speech-to-text service
         # and then sending the resulting text to the bot
         # For now, we'll just send a placeholder message
-        return self.send_message("[Audio message received - Speech to text not implemented yet]")
+        if not audio_path and not audio_data:
+            print("No audio data provided")
+            return False
+        print("Audio data received")
+        # TODO: Capire se l'STT lo farà il bot o noi con wisper o simili
+        if audio_path:
+            return self.send_message(f"[Audio message received from file: {audio_path}]")
+        if audio_data:
+            # Here you would process the audio data
+            # For now, we'll just send a placeholder message
+            return self.send_message(f"[Audio message received from binary_data]")
 
     def close(self):
         """Close the WebSocket connection"""
@@ -205,46 +213,49 @@ class IfabChatWebSocket:
                 self.ws_thread.join(timeout=1)
 
 
-class CustomHTTPRequestHandler(SimpleHTTPRequestHandler):
-    def __init__(self, *args, directory=None, **kwargs):
-        if directory is None:
-            directory = os.getcwd()
-        self.directory = directory
-        super().__init__(*args, **kwargs)
-
-    def end_headers(self):
-        # Add CORS headers to allow requests from any origin
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
-        super().end_headers()
-
-    def do_OPTIONS(self):
-        # Handle preflight requests
-        self.send_response(200)
-        self.end_headers()
-
-
-def run_http_server():
-    """Run the HTTP server to serve the web interface"""
-    # Change to the directory containing the HTML files
-    os.chdir(os.path.dirname(os.path.abspath(__file__)))
-    
-    # Create and start the HTTP server
-    httpd = socketserver.TCPServer(("localhost", HTTP_PORT), CustomHTTPRequestHandler)
-    print(f"Serving HTTP on localhost port {HTTP_PORT} (http://localhost:{HTTP_PORT}/)")
-    httpd.serve_forever()
-
-
 if __name__ == '__main__':
+    from http.server import SimpleHTTPRequestHandler
+
+
+    class CustomHTTPRequestHandler(SimpleHTTPRequestHandler):
+        def __init__(self, *args, directory=None, **kwargs):
+            if directory is None:
+                directory = os.getcwd()
+            self.directory = directory
+            super().__init__(*args, **kwargs)
+
+        def end_headers(self):
+            # Add CORS headers to allow requests from any origin
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+            self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+            super().end_headers()
+
+        def do_OPTIONS(self):
+            # Handle preflight requests
+            self.send_response(200)
+            self.end_headers()
+
+
+    def run_http_server(HTTP_PORT):
+        """Run the HTTP server to serve the web interface"""
+        # Change to the directory containing the HTML files
+        os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
+        # Create and start the HTTP server
+        httpd = socketserver.TCPServer(("localhost", HTTP_PORT), CustomHTTPRequestHandler)
+        print(f"Serving HTTP on localhost port {HTTP_PORT} (http://localhost:{HTTP_PORT}/)")
+        httpd.serve_forever()
+
+
     # Start the HTTP server in a separate thread
-    http_thread = threading.Thread(target=run_http_server)
+    http_thread = threading.Thread(target=run_http_server, args=(8000,))
     http_thread.daemon = True
     http_thread.start()
-    
-    print(f"Web interface available at http://localhost:{HTTP_PORT}/")
+
+    print(f"Web interface available at http://localhost:{8000}/")
     print("Press Ctrl+C to exit")
-    
+
     try:
         # Keep the main thread running
         while True:

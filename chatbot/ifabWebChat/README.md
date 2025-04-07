@@ -40,7 +40,7 @@ pip install flask flask-cors flask-socketio requests websocket-client
 1. Avvia il server Flask:
 
 ```bash
-python app.py
+python flaskFrontEnd.py
 ```
 
 2. Apri un browser e vai all'indirizzo: http://localhost:8000
