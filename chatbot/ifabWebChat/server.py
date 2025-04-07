@@ -11,9 +11,9 @@ import requests
 import websocket
 
 # Configuration
-url = "https://europe.directline.botframework.com/v3/directline/conversations"
+url = "https://europe.token.botframework.com/.auth/web/redirect"
 headers = {
-    "Authorization": "Bearer Ec99xFUkF1i7cR8m5TLtPokIlKXvLNdCxIYyDsraweBmf2zltwUZJQQJ99BCACi5YpzAArohAAABAZBSECEz.IpVjYOfmWMOQOHYGdH4G16pGKUArN1pEpAGJebfBjSrKI71E6ZhDJQQJ99BCACi5YpzAArohAAABAZBSMCrh",
+    "Authorization": "Bearer BI91xBzzXppQiRxyBjniBLPFctD8IGqIR0BCmQCyODxSZrZjLX7QJQQJ99BDACi5YpzAArohAAABAZBS4vKQ.AADSam2K6pOkuvzrQHuHHtrCizWCaYBmxRuchOR7Xfgj5voXY512JQQJ99BDACi5YpzAArohAAABAZBS4VqI",
     "Content-Type": "application/json"
 }
 
