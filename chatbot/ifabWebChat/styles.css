@@ -276,7 +276,7 @@ h1 {
     border-bottom-right-radius: 5px;
     align-self: flex-end;
     margin-left: auto;
-    text-align: right;
+    text-align: left;
     float: right;
     clear: both;
 }

@@ -60,7 +60,6 @@ class IfabChatWebSocket:
 
                         # Imposta waiting_for_response a False per fermare l'animazione
                         self.waiting_for_response = False
-                        print("Set waiting_for_response to False")
 
                     # Update watermark
                     if 'id' in activity:
@@ -188,12 +187,12 @@ class IfabChatWebSocket:
             self.waiting_for_response = False
             return False
 
-    def send_audio_message(self, audio_path=None, audio_data=None, message_id=None):
+    def send_audio_message(self, audio_path=None, message_id=None):
         """Send an audio message to the bot for speech-to-text processing"""
         # This would typically involve sending the audio file to a speech-to-text service
         # and then sending the resulting text to the bot
         # For now, we'll just send a placeholder message
-        if not audio_path and not audio_data:
+        if not audio_path:
             print("No audio data provided")
             return False
         print("Audio data received")
@@ -207,13 +206,11 @@ class IfabChatWebSocket:
         
         # Avvia un thread separato per simulare l'elaborazione della trascrizione
         def transcription_thread(audio_path, message_id):
-            # Attendi 3 secondi come richiesto
-            time.sleep(3)
-            
             # Qui in futuro si implementerà l'analisi STT reale
             # Per ora restituiamo un messaggio fisso come richiesto
             stt_text = "analisi audio STT completata"
-            
+            # Attendi 3 secondi come richiesto
+            time.sleep(3)
             # Invia la trascrizione con l'ID del messaggio
             for callback in self.message_callbacks:
                 callback(f"Trascrizione: {stt_text}", message_id)
@@ -223,17 +220,6 @@ class IfabChatWebSocket:
             threading.Thread(target=transcription_thread, args=(audio_path, message_id)).start()
             return True
         
-        if audio_data:
-            # Here you would process the audio data in a similar thread
-            # For now, we'll just send a placeholder message after delay
-            def audio_data_thread(message_id):
-                time.sleep(3)
-                stt_text = "analisi audio STT completata"
-                for callback in self.message_callbacks:
-                    callback(f"Trascrizione: {stt_text}", message_id)
-            
-            threading.Thread(target=audio_data_thread, args=(message_id,)).start()
-            return True
 
     def close(self):
         """Close the WebSocket connection"""

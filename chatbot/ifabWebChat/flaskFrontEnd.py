@@ -108,7 +108,7 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
             chat_client.send_message(text)
 
         threading.Thread(target=send_message_thread).start()
-
+        messageBox("Frontend Messaggio di testo", text, StyleBox.Light)
         return jsonify({'success': True})
 
     # Aggiungi una route per gestire l'invio di un comando a schermo
@@ -132,7 +132,7 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
             return jsonify({'success': False, 'error': 'Invalid button text'}), 400
 
         # Stampa il testo del pulsante nel server per debug
-        print(f"Comando ricevuto: {button_text}")
+        messageBox("Frontend comando", button_text, StyleBox.Light)
         # TODO: Gestione del comando da inviare alla camera in base al bottone
         # TODO: magari aggiungere una callback esterna
         # Qui puoi aggiungere la logica per gestire il comando
@@ -155,10 +155,11 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
         """Handle audio message submission"""
         if 'audio' not in request.files:
             return jsonify({'success': False, 'error': 'No audio file provided'}), 400
-
         audio_file = request.files['audio']
 
         # Crea una directory temporanea se non esiste
+        # TODO: Far creare vuota la diretory temp per ogni nuova connessione, e cancellare alla chiusura della connessione.
+        #   Quando il server viene riavviato, tutte le directory temp pre esistenti vengono cancellate
         temp_dir = os.path.join(os.path.dirname(__file__), 'temp')
         os.makedirs(temp_dir, exist_ok=True)
 
@@ -168,8 +169,8 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
 
         # Salva il file audio e logga il percorso
         audio_file.save(temp_path)
-        print(f"File audio temporaneo salvato in: {temp_path}")
-        
+        messageBox("Frontend audio", f"File audio temporaneo salvato in: {temp_path}", StyleBox.Light)
+
         # Crea un URL relativo per il file audio
         audio_url = f"/temp/audio_{timestamp}.wav"
 
@@ -179,15 +180,10 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
 
         # Crea un ID messaggio basato sul timestamp
         message_id = f"audio_{timestamp}"
-        
+
         # Invia il messaggio audio al bot in un thread separato
         def send_audio_thread():
             chat_client.send_audio_message(audio_path=temp_path, message_id=message_id)
-            # TODO: Rimettere la cancellazione una volta terminato lo sviluppo
-            # Rimuovi il file temporaneo dopo l'invio
-            # if os.path.exists(temp_path):
-            #     os.remove(temp_path)
-            #     print(f"File audio temporaneo rimosso: {temp_path}")
 
         threading.Thread(target=send_audio_thread).start()
 
@@ -199,7 +195,7 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
         """Serve temporary audio files"""
         temp_dir = os.path.join(os.path.dirname(__file__), 'temp')
         return send_from_directory(temp_dir, filename)
-        
+
     # Aggiungi una route per gestire la connessione WebSocket tra backend e frontend
     @socketio.on('connect')
     def handle_connect():
@@ -221,16 +217,19 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
             del active_connections[client_id]
         print(f"Client disconnected: {client_id}")
 
+    # Callback per gestire l'inoltro dei messaggi dal bot al frontend
+    # se ho un messaggio ID, allora devo aggiornare quel baloon
     def message_callback(text, message_id=None):
         """Callback function for when a message is received from the bot"""
-        messageBox("Send to client", text, StyleBox.Dash_Light)
-        # Includi l'ID del messaggio se disponibile
-        message_data = {'type': 'message', 'text': text}
-        if message_id:
-            message_data['messageId'] = message_id
-        socketio.emit('message', message_data)
-        # Assicurati che il messaggio venga inviato immediatamente
-        socketio.sleep(0)
+        if not message_id:
+            messageBox("Send to frontEnd", text, StyleBox.Dash_Light)
+            message_data = {'type': 'message', 'text': text}
+            socketio.emit('message', message_data)
+        else:
+            messageBox("Send to frontEnd audio transcription", text, StyleBox.Dash_Light)
+            message_data = {'type': 'message', 'text': text, 'messageId': message_id}
+            socketio.emit('stt', message_data)
+        socketio.sleep(0)  # Assicurati che il messaggio venga inviato immediatamente
 
     def error_callback(error_text):
         """Callback function for when an error occurs"""
