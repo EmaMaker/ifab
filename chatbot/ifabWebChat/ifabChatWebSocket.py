@@ -8,6 +8,7 @@ import time
 import requests
 import websocket
 
+from util import *
 
 class IfabChatWebSocket:
     """ Class to manage WebSocket connection to the Ifab Chatbot API and the backend"""
@@ -51,7 +52,7 @@ class IfabChatWebSocket:
                     # Only process messages from the bot
                     if activity.get('from', {}).get('id') != self.user_id and activity.get('type') == 'message':
                         # Stampa il messaggio ricevuto per debug
-                        print(f"Bot message received: {activity.get('text', '')}")
+                        messageBox("Copilot", activity.get('text', ''))
 
                         # Notify all callbacks
                         for callback in self.message_callbacks:

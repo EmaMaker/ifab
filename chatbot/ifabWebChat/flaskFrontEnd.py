@@ -8,6 +8,7 @@ from flask_socketio import SocketIO
 
 # Importa la classe IfabChatWebSocket dal ifabChatWebSocket.py
 from ifabChatWebSocket import IfabChatWebSocket
+from util import *
 
 # Dizionario per tenere traccia delle connessioni socket attive
 active_connections = {}
@@ -222,7 +223,7 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
 
     def message_callback(text, message_id=None):
         """Callback function for when a message is received from the bot"""
-        print(f"Sending message to clients: {text}")
+        messageBox("Send to client", text)
         # Includi l'ID del messaggio se disponibile
         message_data = {'type': 'message', 'text': text}
         if message_id:
