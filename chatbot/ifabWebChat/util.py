@@ -1,3 +1,4 @@
+import os
 from enum import Enum, auto
 from textwrap import TextWrapper, indent
 
@@ -39,7 +40,9 @@ def create_box(string, styleName: StyleBox = StyleBox.Double) -> str:
     box += "\n" + corner[2] + corner[4] * (box_width - 2) + corner[3]
     return box
 
-wrapper = TextWrapper(width=150)
+
+wrapper = TextWrapper(width=(os.get_terminal_size().columns if os.get_terminal_size().columns else 120) - 10)
+
 
 def messageBox(who, text, style=StyleBox.Bold):
     print(f"{who}:")
