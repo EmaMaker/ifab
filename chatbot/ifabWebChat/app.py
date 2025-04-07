@@ -158,6 +158,7 @@ def button_click():
 
 # Aggiungi il percorso dei file temporanei nei log
 @app.route('/send-audio', methods=['POST'])
+@app.route('/upload-audio', methods=['POST'])
 def send_audio():
     """Handle audio message submission"""
     if 'audio' not in request.files:
@@ -184,10 +185,11 @@ def send_audio():
     # Invia il messaggio audio al bot in un thread separato
     def send_audio_thread():
         chat_client.send_message(f"[Messaggio audio ricevuto - File: {temp_path}]")
+        # TODO: Rimettere la cancellazione una volta terminato lo sviluppo
         # Rimuovi il file temporaneo dopo l'invio
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
-            print(f"File audio temporaneo rimosso: {temp_path}")
+        # if os.path.exists(temp_path):
+        #     os.remove(temp_path)
+        #     print(f"File audio temporaneo rimosso: {temp_path}")
     
     threading.Thread(target=send_audio_thread).start()
     

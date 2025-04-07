@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let microphone = null;
     let animationFrame = null;
     let volumeIndicator = null;
+    let recordingMode = 'toggle'; // Nuova variabile per la modalità di registrazione: 'toggle' o 'push'
     
     // Inizializza la connessione Socket.IO
     const socket = io();
@@ -174,7 +175,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             isRecording = true;
             recordButton.classList.add('recording');
-            statusElement.textContent = 'Registrazione in corso...';
+            statusElement.textContent = 'Registrazione in corso... Clicca di nuovo per terminare';
             
             // Crea l'indicatore del volume
             volumeIndicator = document.createElement('div');
@@ -306,17 +307,40 @@ document.addEventListener('DOMContentLoaded', function() {
         sendTextMessage(messageInput.value.trim());
     });
     
-    recordButton.addEventListener('mousedown', startRecording);
-    recordButton.addEventListener('mouseup', stopRecording);
-    recordButton.addEventListener('mouseleave', stopRecording);
-    recordButton.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        startRecording();
-    });
-    recordButton.addEventListener('touchend', (e) => {
-        e.preventDefault();
-        stopRecording();
-    });
+    // Modifica gli event listener per il pulsante di registrazione
+    if (recordingMode === 'push') {
+        // Modalità push-to-talk (registra solo mentre è premuto)
+        recordButton.addEventListener('mousedown', startRecording);
+        recordButton.addEventListener('mouseup', stopRecording);
+        recordButton.addEventListener('mouseleave', stopRecording);
+        recordButton.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            startRecording();
+        });
+        recordButton.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            stopRecording();
+        });
+    } else {
+        // Modalità toggle (clicca una volta per iniziare, clicca di nuovo per fermare)
+        recordButton.addEventListener('click', () => {
+            if (isRecording) {
+                stopRecording();
+            } else {
+                startRecording();
+            }
+        });
+        
+        // Per dispositivi touch
+        recordButton.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            if (isRecording) {
+                stopRecording();
+            } else {
+                startRecording();
+            }
+        });
+    }
     
     // Initialize the chat
     initChat();
