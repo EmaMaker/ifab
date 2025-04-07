@@ -18,6 +18,14 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 def serve_image(filename):
     return send_from_directory('images', filename)
 
+@app.route('/styles.css')
+def serve_css():
+    return send_from_directory('.', 'styles.css')
+
+@app.route('/script.js')
+def serve_js():
+    return send_from_directory('.', 'script.js')
+
 # Inizializza il client WebSocket per la comunicazione con il bot
 chat_client = IfabChatWebSocket()
 
@@ -148,6 +156,7 @@ def button_click():
     return jsonify({'success': True})
 
 
+# Aggiungi il percorso dei file temporanei nei log
 @app.route('/send-audio', methods=['POST'])
 def send_audio():
     """Handle audio message submission"""
@@ -156,9 +165,17 @@ def send_audio():
     
     audio_file = request.files['audio']
     
-    # Salva temporaneamente il file audio
-    temp_path = os.path.join(os.path.dirname(__file__), 'temp_audio.wav')
+    # Crea una directory temporanea se non esiste
+    temp_dir = os.path.join(os.path.dirname(__file__), 'temp')
+    os.makedirs(temp_dir, exist_ok=True)
+    
+    # Genera un nome file univoco con timestamp
+    timestamp = time.strftime("%Y%m%d-%H%M%S")
+    temp_path = os.path.join(temp_dir, f'audio_{timestamp}.wav')
+    
+    # Salva il file audio e logga il percorso
     audio_file.save(temp_path)
+    print(f"File audio temporaneo salvato in: {temp_path}")
     
     # Assicurati che la conversazione sia attiva
     if not chat_client.running and not chat_client.start_conversation():
@@ -166,10 +183,11 @@ def send_audio():
     
     # Invia il messaggio audio al bot in un thread separato
     def send_audio_thread():
-        chat_client.send_message("[Messaggio audio ricevuto - Conversione speech-to-text non ancora implementata]")
+        chat_client.send_message(f"[Messaggio audio ricevuto - File: {temp_path}]")
         # Rimuovi il file temporaneo dopo l'invio
         if os.path.exists(temp_path):
             os.remove(temp_path)
+            print(f"File audio temporaneo rimosso: {temp_path}")
     
     threading.Thread(target=send_audio_thread).start()
     
