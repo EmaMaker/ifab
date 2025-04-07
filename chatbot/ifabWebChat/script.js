@@ -69,11 +69,27 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Show loading animation
-    function showLoading() {
+    function showLoading(isButtonClick = false) {
         isWaitingForResponse = true;
-        statusElement.innerHTML = '<div class="loading-animation"><div></div><div></div><div></div><div></div></div> In attesa di risposta...';
+        
+        if (isButtonClick) {
+            // Versione più breve per i pulsanti statici
+            statusElement.innerHTML = '<div class="loading-animation"><div></div><div></div><div></div><div></div></div> Comando inviato...';
+            
+            // Imposta un timer per nascondere automaticamente il loading dopo 1-2 secondi
+            setTimeout(() => {
+                hideLoading();
+            }, 1500); // 1.5 secondi
+        } else {
+            // Versione standard per messaggi e registrazioni
+            statusElement.innerHTML = '<div class="loading-animation"><div></div><div></div><div></div><div></div></div> In attesa di risposta...';
+        }
+        
         sendButton.disabled = true;
         recordButton.disabled = true;
+        
+        // Disabilita i pulsanti statici
+        setStaticButtonsState(true);
     }
     
     // Hide loading animation
@@ -82,6 +98,9 @@ document.addEventListener('DOMContentLoaded', function() {
         statusElement.innerHTML = '';
         sendButton.disabled = false;
         recordButton.disabled = false;
+        
+        // Riabilita i pulsanti statici
+        setStaticButtonsState(false);
     }
     
     // Send a text message
@@ -342,7 +361,60 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // Funzione per abilitare/disabilitare tutti i pulsanti statici
+    function setStaticButtonsState(disabled) {
+        document.querySelectorAll('.static-btn').forEach(button => {
+            button.disabled = disabled;
+            if (disabled) {
+                button.classList.add('disabled');
+            } else {
+                button.classList.remove('disabled');
+            }
+        });
+    }
+    
     // Initialize the chat
     initChat();
+    
+    // Aggiungi event listener per i pulsanti statici
+    document.querySelectorAll('.static-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const buttonText = this.querySelector('span').textContent;
+            
+            // Invia il testo del pulsante al server
+            fetch('/button-click', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ text: buttonText })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Mostra un feedback visivo che il pulsante è stato premuto
+                    this.classList.add('button-pressed');
+                    setTimeout(() => {
+                        this.classList.remove('button-pressed');
+                    }, 300);
+                    
+                    // Mostra l'animazione di caricamento temporanea per i pulsanti
+                    showLoading(true);
+                    
+                    console.log('Comando inviato:', data.command);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                addBotMessage('Si è verificato un errore durante l\'invio del comando.');
+            });
+        });
+    });
+
 
 });

@@ -126,7 +126,7 @@ def send_message():
 
 @app.route('/button-click', methods=['POST'])
 def button_click():
-    """Handle button click events"""
+    """Handle button click events without sending to chatbot"""
     data = request.json
     if not data or 'text' not in data:
         return jsonify({'success': False, 'error': 'No text provided'}), 400
@@ -144,20 +144,24 @@ def button_click():
         return jsonify({'success': False, 'error': 'Invalid button text'}), 400
     
     # Stampa il testo del pulsante nel server per debug
-    print(f"Pulsante premuto: {button_text}")
+    print(f"Comando ricevuto: {button_text}")
     
-    # Assicurati che la conversazione sia attiva
-    if not chat_client.running and not chat_client.start_conversation():
-        return jsonify({'success': False, 'error': 'Failed to start conversation'}), 500
+    # Qui puoi aggiungere la logica per gestire il comando
+    # Invece di inviare il messaggio al chatbot, registra solo il comando
+    # che verrà poi utilizzato per chiamare altre funzioni
     
-    # In futuro, qui si può aggiungere la logica per gestire diversi tipi di pulsanti
-    # Per ora, inviamo solo il testo al backend senza mostrarlo nella chat
+    # Esempio di come potresti gestire diversi comandi:
+    # if button_text == "Aiuto":
+    #     # Chiama una funzione specifica per l'aiuto
+    #     pass
+    # elif button_text == "Informazioni":
+    #     # Chiama una funzione specifica per le informazioni
+    #     pass
     
-    return jsonify({'success': True})
+    return jsonify({'success': True, 'command': button_text})
 
 
 # Aggiungi il percorso dei file temporanei nei log
-@app.route('/send-audio', methods=['POST'])
 @app.route('/upload-audio', methods=['POST'])
 def send_audio():
     """Handle audio message submission"""
