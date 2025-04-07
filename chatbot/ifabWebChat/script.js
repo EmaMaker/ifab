@@ -6,6 +6,20 @@ document.addEventListener('DOMContentLoaded', function () {
     const recordButton = document.getElementById('recordButton');
     const statusElement = document.getElementById('status');
 
+    // Funzione per ridimensionare automaticamente la textarea
+    function autoResizeTextarea() {
+        messageInput.style.height = 'auto';
+        messageInput.style.height = messageInput.scrollHeight + 'px';
+    }
+
+    // Aggiungi event listener per il ridimensionamento automatico
+    messageInput.addEventListener('input', autoResizeTextarea);
+    messageInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && e.shiftKey) {
+            setTimeout(autoResizeTextarea, 0);
+        }
+    });
+
     let isRecording = false;
     let mediaRecorder = null;
     let audioChunks = [];
@@ -51,22 +65,39 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // Add a user message to the chat
+    // Funzione per controllare se l'utente è in fondo alla chat
+    function isUserAtBottom() {
+        const threshold = 50; // Soglia di tolleranza in pixel
+        return (chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight) <= threshold;
+    }
+
+    // Funzione per scorrere automaticamente verso il basso
+    function scrollToBottom() {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
     function addUserMessage(text) {
+        const wasAtBottom = isUserAtBottom();
         const messageDiv = document.createElement('div');
         messageDiv.className = 'message user-message';
         messageDiv.textContent = text;
         messageContainer.appendChild(messageDiv);
-        chatContainer.scrollTop = chatContainer.scrollHeight;
+        if (wasAtBottom) {
+            scrollToBottom();
+        }
     }
 
     // Add a bot message to the chat with Markdown support
     function addBotMessage(text) {
+        const wasAtBottom = isUserAtBottom();
         const messageDiv = document.createElement('div');
         messageDiv.className = 'message bot-message';
         // Utilizziamo marked per convertire il testo Markdown in HTML
         messageDiv.innerHTML = marked.parse(text);
         messageContainer.appendChild(messageDiv);
-        chatContainer.scrollTop = chatContainer.scrollHeight;
+        if (wasAtBottom) {
+            scrollToBottom();
+        }
     }
 
     // Add a user audio message to the chat
