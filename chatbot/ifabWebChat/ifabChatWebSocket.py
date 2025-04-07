@@ -187,7 +187,7 @@ class IfabChatWebSocket:
             self.waiting_for_response = False
             return False
 
-    def send_audio_message(self, audio_path=None, audio_data=None):
+    def send_audio_message(self, audio_path=None, audio_data=None, message_id=None):
         """Send an audio message to the bot for speech-to-text processing"""
         # This would typically involve sending the audio file to a speech-to-text service
         # and then sending the resulting text to the bot
@@ -198,11 +198,28 @@ class IfabChatWebSocket:
         print("Audio data received")
         # TODO: Capire se l'STT lo farà il bot o noi con wisper o simili
         if audio_path:
-            return self.send_message(f"[Audio message received from file: {audio_path}]")
+            # Qui in futuro si implementerà l'analisi STT reale
+            # Per ora restituiamo un messaggio fisso come richiesto
+            stt_text = "analisi audio STT"
+            # Invia sia il messaggio audio che il testo analizzato, includendo l'ID del messaggio
+            for callback in self.message_callbacks:
+                # Estrai l'ID del messaggio dal percorso del file se non fornito
+                if not message_id:
+                    # Prova a estrarre un ID dal nome del file audio
+                    filename = os.path.basename(audio_path)
+                    if filename.startswith('audio_'):
+                        message_id = 'audio_' + filename.split('_')[1].split('.')[0]
+                
+                # Invia la trascrizione con l'ID del messaggio
+                callback(f"Trascrizione: {stt_text}", message_id)
+            return True
         if audio_data:
             # Here you would process the audio data
             # For now, we'll just send a placeholder message
-            return self.send_message(f"[Audio message received from binary_data]")
+            stt_text = "analisi audio STT"
+            for callback in self.message_callbacks:
+                callback(f"Trascrizione: {stt_text}", message_id)
+            return True
 
     def close(self):
         """Close the WebSocket connection"""

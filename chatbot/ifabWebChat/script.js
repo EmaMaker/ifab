@@ -16,6 +16,8 @@ document.addEventListener('DOMContentLoaded', function () {
     let animationFrame = null;
     let volumeIndicator = null;
     let recordingMode = 'toggle'; // Nuova variabile per la modalità di registrazione: 'toggle' o 'push'
+    let lastAudioPath = null; // Variabile per tenere traccia dell'ultimo file audio registrato
+    let audioMessages = {}; // Oggetto per memorizzare i percorsi audio associati a ciascun messaggio
 
     // Inizializza la connessione Socket.IO
     const socket = io();
@@ -23,7 +25,30 @@ document.addEventListener('DOMContentLoaded', function () {
     // Gestisci i messaggi in arrivo dal server
     socket.on('message', function (data) {
         if (data.type === 'message') {
-            addBotMessage(data.text);
+            // Controlla se è una risposta a un messaggio audio
+            if (data.text.startsWith('Trascrizione:')) {
+                // Verifica se è specificato un ID messaggio nella risposta
+                if (data.messageId && data.messageId.startsWith('audio_')) {
+                    // Aggiorna il messaggio specifico usando l'ID fornito dal backend
+                    updateAudioMessage(data.messageId, '🎤 ' + data.text);
+                } else {
+                    // Fallback al comportamento precedente se non c'è un ID
+                    const messages = document.querySelectorAll('.message.user-message');
+                    if (messages.length > 0) {
+                        const lastMessage = messages[messages.length - 1];
+                        const messageId = lastMessage.dataset.messageId;
+                        if (messageId && messageId.startsWith('audio_')) {
+                            updateAudioMessage(messageId, '🎤 ' + data.text);
+                        } else {
+                            addBotMessage(data.text);
+                        }
+                    } else {
+                        addBotMessage(data.text);
+                    }
+                }
+            } else {
+                addBotMessage(data.text);
+            }
             hideLoading();
         } else if (data.type === 'error') {
             addBotMessage('Errore: ' + data.text);
@@ -67,11 +92,118 @@ document.addEventListener('DOMContentLoaded', function () {
         messageContainer.appendChild(messageDiv);
         chatContainer.scrollTop = chatContainer.scrollHeight;
     }
+    
+    // Add a user audio message to the chat
+    function addUserAudioMessage(text, audioPath, customMessageId = null) {
+        // Usa l'ID fornito o genera un ID univoco per questo messaggio audio
+        const messageId = customMessageId || ('audio_' + Date.now());
+        
+        // Memorizza il percorso audio associato a questo ID
+        if (audioPath) {
+            audioMessages[messageId] = audioPath;
+        }
+        
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message user-message';
+        messageDiv.dataset.messageId = messageId;
+        
+        // Crea un contenitore per il messaggio audio
+        const audioContainer = document.createElement('div');
+        audioContainer.className = 'audio-message';
+        
+        // Crea il pulsante di riproduzione con sfondo visibile
+        const playButton = document.createElement('button');
+        playButton.className = 'audio-play-btn';
+        playButton.innerHTML = `
+            <svg viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z"/>
+            </svg>
+        `;
+        
+        // Crea l'elemento per il testo con stile per andare a capo
+        const textSpan = document.createElement('span');
+        textSpan.className = 'audio-transcription';
+        
+        // Aggiungi un'animazione di caricamento iniziale
+        const loadingAnimation = document.createElement('div');
+        loadingAnimation.className = 'loading-animation';
+        loadingAnimation.innerHTML = '<div></div><div></div><div></div><div></div>';
+        textSpan.appendChild(loadingAnimation);
+        textSpan.appendChild(document.createTextNode(' Trascrizione in corso...'));
+
+        
+        // Aggiungi gli elementi al contenitore
+        audioContainer.appendChild(playButton);
+        audioContainer.appendChild(textSpan);
+        
+        // Aggiungi il contenitore al messaggio
+        messageDiv.appendChild(audioContainer);
+        
+        // Implementa la riproduzione dell'audio quando si preme il pulsante play
+        playButton.addEventListener('click', function() {
+            // Ottieni l'ID del messaggio dal genitore più vicino con l'attributo data-message-id
+            const parentMessage = this.closest('.message');
+            const currentMessageId = parentMessage ? parentMessage.dataset.messageId : null;
+            
+            // Usa l'ID del messaggio per trovare il percorso audio corrispondente
+            const audioPath = currentMessageId ? audioMessages[currentMessageId] : null;
+            
+            console.log('ID messaggio corrente:', currentMessageId);
+            console.log('Audio disponibili:', audioMessages);
+            console.log('Percorso audio trovato:', audioPath);
+            
+            if (audioPath) {
+                // Crea un elemento audio e riproduci il file
+                const audio = new Audio(audioPath);
+                audio.play()
+                    .then(() => {
+                        console.log('Audio riprodotto con successo');
+                    })
+                    .catch(error => {
+                        console.error('Errore durante la riproduzione audio:', error);
+                        // Prova con un percorso relativo se il percorso assoluto non funziona
+                        const relativeAudioPath = audioPath.startsWith('/') ? audioPath : '/' + audioPath;
+                        const fallbackAudio = new Audio(relativeAudioPath);
+                        fallbackAudio.play()
+                            .catch(err => {
+                                console.error('Anche il fallback ha fallito:', err);
+                            });
+                    });
+            } else {
+                console.log('Nessun file audio disponibile per la riproduzione');
+            }
+        });
+        
+        messageContainer.appendChild(messageDiv);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+        
+        return messageId;
+    }
+    
+    // Update an existing audio message with transcription
+    function updateAudioMessage(messageId, text) {
+        const messageDiv = document.querySelector(`.message[data-message-id="${messageId}"]`);
+        if (messageDiv) {
+            const textSpan = messageDiv.querySelector('.audio-transcription');
+            if (textSpan) {
+                // Rimuovi l'animazione di caricamento
+                const loadingAnimation = textSpan.querySelector('.loading-animation');
+                if (loadingAnimation) {
+                    loadingAnimation.remove();
+                }
+                
+                // Aggiorna il testo
+                textSpan.innerHTML = text;
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+        }
+    }
 
     // Show loading animation
     function showLoading(msg = 'In attesa di risposta') {
         isWaitingForResponse = true;
-statusElement.innerHTML = `<div class="loading-animation"><div></div><div></div><div></div><div></div></div> ${msg}...`;        sendButton.disabled = true;
+        statusElement.innerHTML = `<div class="loading-animation"><div></div><div></div><div></div><div></div></div>${msg}<div class="loading-animation"><div></div><div></div><div></div><div></div></div>`;
+        sendButton.disabled = true;
         recordButton.disabled = true;
 
         // Disabilita i pulsanti statici
@@ -229,6 +361,10 @@ statusElement.innerHTML = `<div class="loading-animation"><div></div><div></div>
                 const formData = new FormData();
                 formData.append('audio', audioBlob, 'recording.wav');
 
+                // Crea immediatamente un messaggio audio utente con animazione di caricamento
+                const tempMessageId = 'audio_' + Date.now();
+                const messageId = addUserAudioMessage('🎤', null, tempMessageId);
+                
                 showLoading();
 
                 fetch('/upload-audio', {
@@ -242,11 +378,35 @@ statusElement.innerHTML = `<div class="loading-animation"><div></div><div></div>
                         return response.json();
                     })
                     .then(data => {
+                        // Salva il percorso del file audio per la riproduzione
+                        if (data.success && data.file_path) {
+                            lastAudioPath = data.file_path;
+                            
+                            // Se il server ha restituito un ID messaggio, aggiornalo nel DOM
+                            if (data.message_id && data.message_id !== tempMessageId) {
+                                const messageDiv = document.querySelector(`.message[data-message-id="${tempMessageId}"]`);
+                                if (messageDiv) {
+                                    messageDiv.dataset.messageId = data.message_id;
+                                    // Aggiorna anche la mappa degli audio
+                                    audioMessages[data.message_id] = data.file_path;
+                                    delete audioMessages[tempMessageId];
+                                } else {
+                                    // Fallback se non troviamo l'elemento
+                                    audioMessages[tempMessageId] = data.file_path;
+                                }
+                            } else {
+                                // Associa il percorso audio a questo messaggio specifico
+                                audioMessages[messageId] = data.file_path;
+                            }
+                            
+                            // Mostra un messaggio temporaneo
+                            updateAudioMessage(data.message_id || messageId, '🎤 Messaggio audio registrato');
+                        }
                         // The response will be handled by the WebSocket connection
                     })
                     .catch(error => {
                         console.error('Error:', error);
-                        addBotMessage('Si è verificato un errore durante l\'invio della registrazione.');
+                        updateAudioMessage(messageId, '🎤 Errore durante l\'elaborazione dell\'audio');
                         hideLoading();
                     });
             };

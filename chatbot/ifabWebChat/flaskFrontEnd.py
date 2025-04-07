@@ -168,14 +168,20 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
         # Salva il file audio e logga il percorso
         audio_file.save(temp_path)
         print(f"File audio temporaneo salvato in: {temp_path}")
+        
+        # Crea un URL relativo per il file audio
+        audio_url = f"/temp/audio_{timestamp}.wav"
 
         # Assicurati che la conversazione sia attiva
         if not chat_client.running and not chat_client.start_conversation():
             return jsonify({'success': False, 'error': 'Failed to start conversation'}), 500
 
+        # Crea un ID messaggio basato sul timestamp
+        message_id = f"audio_{timestamp}"
+        
         # Invia il messaggio audio al bot in un thread separato
         def send_audio_thread():
-            chat_client.send_audio_message(audio_path=temp_path)
+            chat_client.send_audio_message(audio_path=temp_path, message_id=message_id)
             # TODO: Rimettere la cancellazione una volta terminato lo sviluppo
             # Rimuovi il file temporaneo dopo l'invio
             # if os.path.exists(temp_path):
@@ -184,8 +190,15 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
 
         threading.Thread(target=send_audio_thread).start()
 
-        return jsonify({'success': True})
+        return jsonify({'success': True, 'file_path': audio_url, 'message_id': message_id})
 
+    # Aggiungi una route per servire i file audio temporanei
+    @app.route('/temp/<path:filename>')
+    def serve_audio(filename):
+        """Serve temporary audio files"""
+        temp_dir = os.path.join(os.path.dirname(__file__), 'temp')
+        return send_from_directory(temp_dir, filename)
+        
     # Aggiungi una route per gestire la connessione WebSocket tra backend e frontend
     @socketio.on('connect')
     def handle_connect():
@@ -207,10 +220,14 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
             del active_connections[client_id]
         print(f"Client disconnected: {client_id}")
 
-    def message_callback(text):
+    def message_callback(text, message_id=None):
         """Callback function for when a message is received from the bot"""
         print(f"Sending message to clients: {text}")
-        socketio.emit('message', {'type': 'message', 'text': text})
+        # Includi l'ID del messaggio se disponibile
+        message_data = {'type': 'message', 'text': text}
+        if message_id:
+            message_data['messageId'] = message_id
+        socketio.emit('message', message_data)
         # Assicurati che il messaggio venga inviato immediatamente
         socketio.sleep(0)
 
