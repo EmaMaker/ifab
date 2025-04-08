@@ -24,6 +24,8 @@ if __name__ == '__main__':
     argcomplete.autocomplete(parser)
     args = parser.parse_args()
 
+    model_dir = os.path.dirname(args.model)
+
     # Inizio del test di creazione della classe
     start_time_creation = time.time()
     player = ap.AudioPlayer(args.model)
@@ -36,7 +38,7 @@ if __name__ == '__main__':
     # Inizio della prima prova
     start_time_first_test = time.time()
     print("Riproduzione di un file WAV dalla memoria")
-    wav_data = ap.open_wave("tts-model/welcome.wav")
+    wav_data = ap.open_wave(os.path.join(model_dir, "welcome.wav"))
     player.play_wav_from_memory(wav_data)
     # Fine della prima prova
     player.waitEndBuffer()

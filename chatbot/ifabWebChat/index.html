@@ -4,9 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IFAB Web Chat</title>
-    <!-- Inclusione delle librerie esterne -->
+    <!-- Inclusione delle librerie esterne con fallback locale -->
     <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
+    <script>
+        // Fallback per socket.io se il CDN fallisce
+        if (typeof io === 'undefined') {
+            document.write('<script src="/libs/socket.io.min.js"><\/script>');
+        }
+    </script>
+    
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        // Fallback per marked.js se il CDN fallisce
+        if (typeof marked === 'undefined') {
+            document.write('<script src="/libs/marked.min.js"><\/script>');
+        }
+    </script>
+    
     <link rel="stylesheet" href="/styles.css">
 </head>
 <body>

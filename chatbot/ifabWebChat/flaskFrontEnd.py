@@ -92,6 +92,11 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
     def serve_js():
         return send_from_directory('.', 'script.js')
 
+    # Aggiungi route per servire le librerie JavaScript locali
+    @app.route('/libs/<path:filename>')
+    def serve_libs(filename):
+        return send_from_directory('libs', filename)
+
     # Aggiungi una route per servire il file HTML e generare la pagina
     @app.route('/')
     def index():
