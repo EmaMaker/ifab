@@ -6,6 +6,12 @@ import requests
 import websocket
 from pyLib.util import *
 
+# Add these imports at the top of your file
+import os
+import certifi
+
+# Add this line near the beginning of your code, before any network requests
+os.environ['SSL_CERT_FILE'] = certifi.where()
 
 class IfabChatWebSocket:
     """ Class to manage WebSocket connection to the Ifab Chatbot API and the backend"""

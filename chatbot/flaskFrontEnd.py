@@ -1,3 +1,4 @@
+from pydoc import text
 import shutil
 import threading
 import time
@@ -9,6 +10,7 @@ from flask_socketio import SocketIO
 
 # Importa la classe IfabChatWebSocket dal ifabChatWebSocket.py
 from ifabChatWebSocket import IfabChatWebSocket
+from pyLib import AudioPlayer as ap
 from pyLib.util import *
 
 """
@@ -19,10 +21,14 @@ Flask WebSocket server per la comunicazione con il bot
                             [(text, image_path), ...]
 @param sttFun:              Funzione di callback per la trascrizione audio (opzionale)
                             @param sttFun(pathToAudio) -> Transcription | None
+@param ttsFun:              Funzione di callback per la sintesi vocale (opzionale)
+                            @param ttsFun(text) -> None
 """
 
 
-def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list_dx: tuple[str, str], sttFun: Callable[[str], str | None] = None) -> tuple[
+def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list_dx: tuple[str, str],
+               sttFun: Callable[[str], str | None] = None,
+               ttsFun: Callable[[str], None] = None) -> tuple[
     Flask, SocketIO, IfabChatWebSocket]:
     """Crea e restituisce l'istanza dell'app Flask, socketio e client WebSocket, con tutti i callback"""
 
@@ -33,6 +39,8 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
         if not message_id:  # Nessuno ID messaggio, quindi è un messaggio normale
             messageBox("Send new message to frontEnd", text, StyleBox.Dash_Light)
             message_data = {'type': 'message', 'text': text}
+            if ttsFun:
+                ttsFun(text)
             socketio.emit('message', message_data)
         else:  #
             messageBox("Send to frontEnd audio transcription to append", text, StyleBox.Dash_Light)
@@ -69,6 +77,7 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
 
     # Registra i callback per gestire l'inoltro dei messaggi dal bot al frontend
     chat_client.add_message_callback(backEnd_msg2UI)
+    chat_client.add_message_callback(stt_funx)
     chat_client.add_error_callback(bot_err2UI)
 
     # Crea una directory temporanea vuota all'avvio del server
@@ -261,11 +270,18 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
 if __name__ == '__main__':
     import argparse
 
+    herePath = os.path.join(os.path.dirname(__file__))
     parser = argparse.ArgumentParser(description='Avvia il server Flask con SocketIO')
-    parser.add_argument('--host', type=str, default='0.0.0.0', help='Host del server')
-    parser.add_argument('--port', type=int, default=8000, help='Porta del server')
+    parser.add_argument('--host', type=str, default='0.0.0.0', help="Host del server [default '%(default)s']")
+    parser.add_argument('--port', type=int, default=8000, help="Porta del server [default '%(default)s']")
+    parser.add_argument("--model", type=str, help="Path to the Piper-TTS model [default '%(default)s']",
+                        default=os.path.relpath(os.path.join(herePath, "tts-model", "it_IT-paola-medium.onnx")))
     args = parser.parse_args()
 
+    # Inizializza TTS
+    print(f"Caricamento del modello TTS da: {args.model}")
+    player = ap.AudioPlayer(args.model)
+    print("Modello TTS caricato con successo")
     # Inizializza il client WebSocket per la comunicazione con il bot
     # Token Bot Ema:
     # url = "https://europe.directline.botframework.com/v3/directline/conversations"
@@ -286,7 +302,7 @@ if __name__ == '__main__':
         ("CNC", "images/music.jpg"),
         ("Stampante Plotter", "images/info.jpg"),
     ]
-    app, socketio, chat_client = create_app(url, auth, button_sx, button_dx)  # Crea l'app Flask e SocketIO
+    app, socketio, chat_client = create_app(url, auth, button_sx, button_dx, ttsFun=player.play_text)  # Crea l'app Flask e SocketIO
 
     # Avvia il server Flask con SocketIO
     socketio.run(app, host=args.host, port=args.port, debug=True, allow_unsafe_werkzeug=True)  # Avvia il server Flask con SocketIO
