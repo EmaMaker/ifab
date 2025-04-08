@@ -77,7 +77,6 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
 
     # Registra i callback per gestire l'inoltro dei messaggi dal bot al frontend
     chat_client.add_message_callback(backEnd_msg2UI)
-    chat_client.add_message_callback(stt_funx)
     chat_client.add_error_callback(bot_err2UI)
 
     # Crea una directory temporanea vuota all'avvio del server
