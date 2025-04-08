@@ -347,6 +347,22 @@ h1 {
     gap: 5px;
 }
 
+/* Stile per il messaggio di connessione persa */
+.connection-lost {
+    background-color: rgba(255, 200, 200, 0.8);
+    color: #d32f2f;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: bold;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 0.7; }
+    50% { opacity: 1; }
+    100% { opacity: 0.7; }
+}
+
 .status .loading-animation {
     display: inline-flex;
     align-items: center;

@@ -78,6 +78,31 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
     # Registra i callback per gestire l'inoltro dei messaggi dal bot al frontend
     chat_client.add_message_callback(backEnd_msg2UI)
     chat_client.add_error_callback(bot_err2UI)
+    
+    # Gestione dell'evento di connessione Socket.IO
+    @socketio.on('connect')
+    def handle_connect():
+        """Gestisce l'evento di connessione di un client Socket.IO"""
+        messageBox("Nuova connessione frontend", "Avvio nuova conversazione con il bot", StyleBox.Dash_Bold)
+        
+        # Invia un messaggio di benvenuto all'utente
+        socketio.emit('message', {'type': 'message', 'text': 'Benvenuto! Puoi scrivere un messaggio o registrare un messaggio vocale.'})
+        
+        # Gestione più robusta della connessione
+        try:
+            if chat_client.running:
+                messageBox("Chiusura conversazione", "Chiudo la conversazione precedente con il bot", StyleBox.Light)
+                chat_client.stop_conversation()
+                # Breve pausa per assicurarsi che la connessione precedente sia completamente chiusa
+                time.sleep(0.5)
+            
+            # Tenta di avviare una nuova conversazione
+            if not chat_client.start_conversation():
+                messageBox("Errore connessione", "Impossibile avviare la conversazione con il bot", StyleBox.Error)
+                socketio.emit('message', {'type': 'error', 'text': 'Impossibile avviare la conversazione con il bot'})
+        except Exception as e:
+            messageBox("Errore connessione", f"Errore durante l'avvio della conversazione: {str(e)}", StyleBox.Error)
+            socketio.emit('message', {'type': 'error', 'text': f'Errore durante la connessione: {str(e)}'})
 
     # Crea una directory temporanea vuota all'avvio del server
     temp_dir = os.path.join(os.path.dirname(__file__), 'temp')
@@ -158,17 +183,26 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
 
         text = data['text']
 
-        # Assicurati che la conversazione sia attiva
-        if not chat_client.running and not chat_client.start_conversation():
-            return jsonify({'success': False, 'error': 'Failed to start conversation'}), 500
+        # Gestione più robusta della connessione
+        try:
+            # Se la connessione non è attiva, tenta di riavviarla
+            if not chat_client.running:
+                messageBox("Riconnessione", "Tentativo di riavvio della conversazione", StyleBox.Light)
+                if not chat_client.start_conversation():
+                    return jsonify({'success': False, 'error': 'Impossibile avviare la conversazione'}), 500
+                # Breve pausa per assicurarsi che la connessione sia stabilita
+                time.sleep(0.5)
 
-        # Invia il messaggio al bot in un thread separato per non bloccare la risposta HTTP
-        def send_message_thread():
-            chat_client.send_message(text)
+            # Invia il messaggio al bot in un thread separato per non bloccare la risposta HTTP
+            def send_message_thread():
+                chat_client.send_message(text)
 
-        threading.Thread(target=send_message_thread).start()
-        messageBox("Frontend Messaggio di testo", text, StyleBox.Light)
-        return jsonify({'success': True})
+            threading.Thread(target=send_message_thread).start()
+            messageBox("Frontend Messaggio di testo", text, StyleBox.Light)
+            return jsonify({'success': True})
+        except Exception as e:
+            messageBox("Errore invio", f"Errore durante l'invio del messaggio: {str(e)}", StyleBox.Error)
+            return jsonify({'success': False, 'error': f'Errore durante l\'invio: {str(e)}'}), 500
 
     # Aggiungi una route per gestire l'invio di un comando a schermo
     @app.route('/button-click', methods=['POST'])
@@ -227,34 +261,43 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
         # Crea un URL relativo per il file audio
         audio_url = f"/temp/audio_{timestamp}.wav"
 
-        # Assicurati che la conversazione sia attiva
-        if not chat_client.running and not chat_client.start_conversation():
-            return jsonify({'success': False, 'error': 'Failed to start conversation'}), 500
+        # Gestione più robusta della connessione
+        try:
+            # Se la connessione non è attiva, tenta di riavviarla
+            if not chat_client.running:
+                messageBox("Riconnessione", "Tentativo di riavvio della conversazione per audio", StyleBox.Light)
+                if not chat_client.start_conversation():
+                    return jsonify({'success': False, 'error': 'Impossibile avviare la conversazione'}), 500
+                # Breve pausa per assicurarsi che la connessione sia stabilita
+                time.sleep(0.5)
 
-        # Crea un ID messaggio basato sul timestamp
-        message_id = f"audio_{timestamp}"
+            # Crea un ID messaggio basato sul timestamp
+            message_id = f"audio_{timestamp}"
 
-        # Invia il messaggio audio al bot in un thread separato per non bloccare la risposta HTTP
-        def send_audio_thread(audio_path, message_id):
-            stt_audio_text = stt_funx(audio_path=audio_path)
-            if stt_audio_text:
-                messageBox("Backend audio STT", f"Trascrizione audio: {stt_audio_text}", StyleBox.Light)
-                backEnd_msg2UI(stt_audio_text, message_id=message_id)  # Invia messaggio trascritto al frontend
-                if stt_funx is not stt_mock:  # Invia messaggio trascritto al bot solo se veramente trascritto
-                    messageBox("Backend audio STT to Bot", "Trascrizione audio inviata al bot", StyleBox.Light)
-                    chat_client.send_message(stt_audio_text)
+            # Invia il messaggio audio al bot in un thread separato per non bloccare la risposta HTTP
+            def send_audio_thread(audio_path, message_id):
+                stt_audio_text = stt_funx(audio_path=audio_path)
+                if stt_audio_text:
+                    messageBox("Backend audio STT", f"Trascrizione audio: {stt_audio_text}", StyleBox.Light)
+                    backEnd_msg2UI(stt_audio_text, message_id=message_id)  # Invia messaggio trascritto al frontend
+                    if stt_funx is not stt_mock:  # Invia messaggio trascritto al bot solo se veramente trascritto
+                        messageBox("Backend audio STT to Bot", "Trascrizione audio inviata al bot", StyleBox.Light)
+                        chat_client.send_message(stt_audio_text)
+                    else:
+                        time.sleep(1)  # Simula un breve ritardo per il mock
+                        messageBox("Backend audio STT to Bot", "Trascrizione audio non inviata al bot, Mock STT", StyleBox.Light)
+                        backEnd_msg2UI("Trascrizione audio non inviata al bot, Mock STT")  # Invia messaggio mock al frontend
+
                 else:
-                    time.sleep(1)  # Simula un breve ritardo per il mock
-                    messageBox("Backend audio STT to Bot", "Trascrizione audio non inviata al bot, Mock STT", StyleBox.Light)
-                    backEnd_msg2UI("Trascrizione audio non inviata al bot, Mock STT")  # Invia messaggio mock al frontend
+                    messageBox("Backend audio STT", "Errore durante la trascrizione audio", StyleBox.Light)
+                    backEnd_msg2UI("Impossibile trascrivere il messaggio audio", message_id=message_id)
 
-            else:
-                messageBox("Backend audio STT", "Errore durante la trascrizione audio", StyleBox.Light)
-                backEnd_msg2UI("Impossibile trascrivere il messaggio audio", message_id=message_id)
-
-        threading.Thread(target=send_audio_thread, args=(temp_path, message_id,)).start()
-
-        return jsonify({'success': True, 'file_path': audio_url, 'message_id': message_id})
+            threading.Thread(target=send_audio_thread, args=(temp_path, message_id,)).start()
+            return jsonify({'success': True, 'file_path': audio_url, 'message_id': message_id})
+            
+        except Exception as e:
+            messageBox("Errore audio", f"Errore durante l'elaborazione dell'audio: {str(e)}", StyleBox.Error)
+            return jsonify({'success': False, 'error': f'Errore durante l\'elaborazione: {str(e)}'}), 500
 
     # Aggiungi una route per servire i file audio temporanei
     @app.route('/temp/<path:filename>')
@@ -263,6 +306,20 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
         temp_dir = os.path.join(os.path.dirname(__file__), 'temp')
         return send_from_directory(temp_dir, filename)
         
+    # Aggiungi una route per verificare lo stato della connessione
+    @app.route('/check-connection', methods=['GET'])
+    def check_connection():
+        """Check if the connection to the bot is active"""
+        is_connected = chat_client.running
+        if not is_connected:
+            # Tenta di riavviare la connessione se non è attiva
+            is_connected = chat_client.start_conversation()
+        
+        return jsonify({
+            'connected': is_connected,
+            'status': 'active' if is_connected else 'disconnected'
+        })
+        
     # Aggiungi una route per la pagina "Chi siamo"
     @app.route('/about')
     def about():
@@ -270,6 +327,14 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
         with open(os.path.join(os.path.dirname(__file__), 'web-client/about.html'), 'r') as file:
             html_content = file.read()
         return html_content
+        
+    # Gestione dell'evento di disconnessione Socket.IO
+    @socketio.on('disconnect')
+    def handle_disconnect():
+        """Gestisce l'evento di disconnessione di un client Socket.IO"""
+        messageBox("Disconnessione frontend", "Client disconnesso", StyleBox.Light)
+        # Non chiudiamo la conversazione qui, poiché potrebbe essere un refresh della pagina
+        # e vogliamo mantenere la conversazione attiva per quando l'utente si riconnette
 
     return app, socketio, chat_client
 

@@ -57,12 +57,38 @@ document.addEventListener('DOMContentLoaded', function () {
         console.error('Connection error:', error);
         addBotMessage('Errore di connessione al server. Riprova più tardi.');
         hideLoading();
+        
+        // Tenta di riconnettersi automaticamente dopo un breve ritardo
+        setTimeout(function() {
+            console.log('Tentativo di riconnessione automatica...');
+            socket.connect();
+        }, 3000);
     });
-
-    // Initialize the chat
-    function initChat() {
-        addBotMessage('Benvenuto! Puoi scrivere un messaggio o registrare un messaggio vocale.');
-    }
+    
+    // Gestisci la riconnessione
+    socket.on('reconnect', function(attemptNumber) {
+        console.log('Riconnesso al server dopo ' + attemptNumber + ' tentativi');
+        // Verifica lo stato della connessione con il backend
+        fetch('/check-connection')
+            .then(response => response.json())
+            .then(data => {
+                if (data.connected) {
+                    console.log('Connessione al bot verificata con successo');
+                } else {
+                    console.warn('Connessione al bot non attiva, potrebbe essere necessario ricaricare la pagina');
+                }
+            })
+            .catch(err => console.error('Errore durante la verifica della connessione:', err));
+    });
+    
+    // Gestisci la disconnessione
+    socket.on('disconnect', function(reason) {
+        console.log('Disconnesso dal server, motivo: ' + reason);
+        // Non mostrare messaggi di errore per disconnessioni normali durante il refresh
+        if (reason !== 'io client disconnect' && reason !== 'transport close') {
+            statusElement.innerHTML = '<div class="connection-lost">Connessione persa. Tentativo di riconnessione...</div>';
+        }
+    });
 
     // Add a user message to the chat
     // Funzione per controllare se l'utente è in fondo alla chat
@@ -559,9 +585,6 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     }
-
-// Initialize the chat
-    initChat();
 
 // Aggiungi event listener per i pulsanti statici
     document.querySelectorAll('.static-btn').forEach(button => {

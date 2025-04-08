@@ -83,11 +83,13 @@ class IfabChatWebSocket:
             callback(str(error))
 
     def on_close(self, ws, close_status_code, close_msg):
-        print("WebSocket connection closed")
+        print(f"WebSocket connection closed: code {close_status_code}, message: {close_msg}")
         self.running = False
         self.waiting_for_response = False
-        for callback in self.error_callbacks:
-            callback("Connection closed")
+        # Non inviamo il messaggio di errore per chiusure normali (codice 1000 o 1001)
+        if close_status_code is not None and close_status_code not in [1000, 1001]:
+            for callback in self.error_callbacks:
+                callback(f"Connection closed: {close_msg if close_msg else 'Unknown reason'}")
 
     def on_open(self, ws):
         print("WebSocket connection established")
@@ -190,6 +192,25 @@ class IfabChatWebSocket:
             self.waiting_for_response = False
             return False
 
+    def stop_conversation(self):
+        """Terminate the current conversation with the bot and reset all variables"""
+        # Close the WebSocket connection
+        if self.ws:
+            self.ws.close()
+            self.running = False
+            if self.ws_thread and self.ws_thread.is_alive():
+                self.ws_thread.join(timeout=1)
+        
+        # Reset all state variables
+        self.conversation_id = None
+        self.ws = None
+        self.ws_thread = None
+        self.watermark = None
+        self.waiting_for_response = False
+        
+        print("Conversation stopped and variables reset")
+        return True
+        
     def close(self):
         """Close the WebSocket connection"""
         if self.ws:
