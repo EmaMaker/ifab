@@ -38,27 +38,43 @@ def clean_markdown_for_tts(text):
     text = re.sub(r'`([^`]+)`', r'\1', text)
     
     # Rimuovi blocchi di codice
-    text = re.sub(r'`{2,3}.*?`{2,3}', r'', text, flags=re.DOTALL)
-
+    text = re.sub(r'```[\s\S]*?```', '', text)
+    
     # Rimuovi formattazione per link [testo](url)
     text = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', text)
     
     # Rimuovi simboli di intestazione
     text = re.sub(r'^#+\s+', '', text, flags=re.MULTILINE)
-
+    
+    # Modifica simboli di elenco aggiungendo un punto alla fine di ogni elemento
+    text = re.sub(r'^[\*\-\+]\s+(.+?)$', r'\1.', text, flags=re.MULTILINE)
+    
+    # Modifica numeri di elenco numerato aggiungendo un punto alla fine di ogni elemento
+    text = re.sub(r'^\d+\.\s+(.+?)$', r'\1.', text, flags=re.MULTILINE)
+    
     # Rimuovi linee orizzontali
     text = re.sub(r'^-{3,}|^\*{3,}|^_{3,}', '', text, flags=re.MULTILINE)
 
     # Rimuovi spazi multipli e tab
     text = re.sub(r'[ \t]+', ' ', text)
 
+    # Rimuovi spazi all'inizio e alla fine di ogni riga
+    text = re.sub(r'^\s+|\s+$', '', text, flags=re.MULTILINE)
+
     # Rimuovi newline multipli ma preserva singoli newline per mantenere la struttura del testo
     text = re.sub(r'\n{2,}', '\n', text)
     
+    # Rimuovi spazi prima dei segni di punteggiatura
+    text = re.sub(r'\s+([.,;:!?])', r'\1', text)
+    
+    # Formatta correttamente il testo per il TTS
+    # Prima sostituisci gli a capo con virgole e spazi
+    text = re.sub(r'\n', ', ', text)
+    
+    # Rimuovi spazi multipli che potrebbero essersi creati durante la pulizia
+    text = re.sub(r'[ \t]+', ' ', text)
+    
     # Rimuovi spazi all'inizio e alla fine di ogni riga (mantenendo gli a capo)
     text = re.sub(r'^\s+|\s+$', '', text, flags=re.MULTILINE)
-
-    # Aggiungi il punto alla fine di ogni riga, se non è già presente
-    text = re.sub(r'([^.,;:!?])\n', r'\1.\n', text)
 
     return text.strip()

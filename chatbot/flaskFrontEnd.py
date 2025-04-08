@@ -134,6 +134,10 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
     def serve_libs(filename):
         return send_from_directory('web-client/libs', filename)
 
+    @app.route('/favicon.ico')
+    def serve_favicon():
+        return send_from_directory('web-client', 'favicon.ico')
+
     # Aggiungi una route per servire il file HTML e generare la pagina
     @app.route('/')
     def index():
