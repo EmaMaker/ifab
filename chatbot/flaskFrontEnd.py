@@ -12,6 +12,7 @@ from flask_socketio import SocketIO
 from ifabChatWebSocket import IfabChatWebSocket
 from pyLib import AudioPlayer as ap
 from pyLib.util import *
+from pyLib.text_utils import clean_markdown_for_tts
 
 """
 Flask WebSocket server per la comunicazione con il bot 
@@ -40,7 +41,10 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
             messageBox("Send new message to frontEnd", text, StyleBox.Dash_Light)
             message_data = {'type': 'message', 'text': text}
             if ttsFun:
-                ttsFun(text)
+                # Pulisci il testo da elementi Markdown prima di inviarlo al TTS
+                clean_text = clean_markdown_for_tts(text)
+                messageBox("Send to TTS", clean_text, StyleBox.Dash_Light)
+                ttsFun(clean_text)
             socketio.emit('message', message_data)
         else:  #
             messageBox("Send to frontEnd audio transcription to append", text, StyleBox.Dash_Light)

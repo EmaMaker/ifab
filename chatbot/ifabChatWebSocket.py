@@ -1,6 +1,7 @@
 import json
 import threading
 import time
+import random
 
 import requests
 import websocket
@@ -9,6 +10,7 @@ from pyLib.util import *
 # Add these imports at the top of your file
 import os
 import certifi
+import urllib3
 
 # Add this line near the beginning of your code, before any network requests
 os.environ['SSL_CERT_FILE'] = certifi.where()
@@ -33,6 +35,12 @@ class IfabChatWebSocket:
         self.waiting_for_response = False
         self.message_callbacks = []
         self.error_callbacks = []
+        # Reconnection parameters
+        self.max_retries = 5
+        self.base_delay = 1  # Base delay in seconds
+        self.max_delay = 30  # Maximum delay in seconds
+        self.retry_count = 0
+        self.reconnecting = False
 
     def add_message_callback(self, callback):
         """Add a callback function to be called when a message is received"""
@@ -83,82 +91,146 @@ class IfabChatWebSocket:
             callback(str(error))
 
     def on_close(self, ws, close_status_code, close_msg):
-        print(f"WebSocket connection closed: code {close_status_code}, message: {close_msg}")
+        messageBox("WebSocket", f"Connessione chiusa: codice {close_status_code}, messaggio: {close_msg}", StyleBox.Light)
         self.running = False
         self.waiting_for_response = False
-        # Non inviamo il messaggio di errore per chiusure normali (codice 1000 o 1001)
+        
+        # Non tentiamo di riconnetterci per chiusure normali (codice 1000 o 1001)
         if close_status_code is not None and close_status_code not in [1000, 1001]:
+            # Notifica l'utente del problema
             for callback in self.error_callbacks:
-                callback(f"Connection closed: {close_msg if close_msg else 'Unknown reason'}")
+                callback(f"Connessione interrotta: {close_msg if close_msg else 'Motivo sconosciuto'}")
+            
+            # Avvia un tentativo di riconnessione in un thread separato
+            if not self.reconnecting:
+                self.reconnecting = True
+                threading.Thread(target=self._reconnect).start()
+    
+    def _reconnect(self):
+        """Attempt to reconnect to the WebSocket after a connection failure"""
+        messageBox("WebSocket", "Tentativo di riconnessione automatica...", StyleBox.Light)
+        # Breve pausa prima di tentare la riconnessione
+        time.sleep(1)
+        self.start_conversation()
 
     def on_open(self, ws):
         print("WebSocket connection established")
         self.running = True
 
     def start_conversation(self):
-        """Initialize a new conversation and connect to WebSocket"""
-        try:
-            # Start a new conversation
-            response = requests.post(self.url, headers=self.headers)
-            if response.status_code != 201:
-                error_msg = f"Error starting conversation: {response.status_code}"
-                print(error_msg)
-                for callback in self.error_callbacks:
-                    callback(error_msg)
-                return False
+        """Initialize a new conversation and connect to WebSocket with retry mechanism"""
+        # Reset retry count if this is not a reconnection attempt
+        if not self.reconnecting:
+            self.retry_count = 0
+            
+        while self.retry_count < self.max_retries:
+            try:
+                # If we're retrying, add a delay with exponential backoff
+                if self.retry_count > 0:
+                    # Calculate delay with jitter to prevent thundering herd problem
+                    delay = min(self.base_delay * (2 ** (self.retry_count - 1)) + random.uniform(0, 1), self.max_delay)
+                    messageBox("Riconnessione", f"Tentativo {self.retry_count}/{self.max_retries} - Attesa di {delay:.1f} secondi", StyleBox.Light)
+                    time.sleep(delay)
+                
+                # Start a new conversation
+                messageBox("Connessione", f"Tentativo di connessione a {self.url}", StyleBox.Light)
+                response = requests.post(self.url, headers=self.headers, timeout=30)  # Add explicit timeout
+                
+                if response.status_code != 201:
+                    error_msg = f"Error starting conversation: HTTP {response.status_code}"
+                    print(error_msg)
+                    # Increment retry count and try again
+                    self.retry_count += 1
+                    continue
 
-            conv_data = response.json()
-            self.conversation_id = conv_data['conversationId']
-            stream_url = conv_data.get('streamUrl')
+                conv_data = response.json()
+                self.conversation_id = conv_data['conversationId']
+                stream_url = conv_data.get('streamUrl')
 
-            if not stream_url:
-                error_msg = "No stream URL provided in the response"
-                print(error_msg)
-                for callback in self.error_callbacks:
-                    callback(error_msg)
-                return False
+                if not stream_url:
+                    error_msg = "No stream URL provided in the response"
+                    print(error_msg)
+                    self.retry_count += 1
+                    continue
 
-            print(f"Conversation started with ID: {self.conversation_id}")
+                messageBox("Connessione", f"Conversazione avviata con ID: {self.conversation_id}", StyleBox.Light)
 
-            # Connect to WebSocket with ping interval to keep connection alive
-            websocket.enableTrace(False)  # Disable verbose logging
-            self.ws = websocket.WebSocketApp(
-                stream_url,
-                on_message=self.on_message,
-                on_error=self.on_error,
-                on_close=self.on_close,
-                on_open=self.on_open
-            )
+                # Connect to WebSocket with ping interval to keep connection alive
+                websocket.enableTrace(False)  # Disable verbose logging
+                self.ws = websocket.WebSocketApp(
+                    stream_url,
+                    on_message=self.on_message,
+                    on_error=self.on_error,
+                    on_close=self.on_close,
+                    on_open=self.on_open
+                )
 
-            # Start WebSocket connection in a separate thread with ping interval
-            self.ws_thread = threading.Thread(
-                target=lambda: self.ws.run_forever(ping_interval=30, ping_timeout=10)
-            )
-            self.ws_thread.daemon = True
-            self.ws_thread.start()
+                # Start WebSocket connection in a separate thread with ping interval
+                self.ws_thread = threading.Thread(
+                    target=lambda: self.ws.run_forever(ping_interval=30, ping_timeout=10)
+                )
+                self.ws_thread.daemon = True
+                self.ws_thread.start()
 
-            # Wait for connection to establish
-            timeout = 5
-            start_time = time.time()
-            while not self.running and time.time() - start_time < timeout:
-                time.sleep(0.1)
-
-            return self.running
-        except Exception as e:
-            error_msg = f"Error starting conversation: {e}"
-            print(error_msg)
-            for callback in self.error_callbacks:
-                callback(error_msg)
-            return False
+                # Wait for connection to establish
+                timeout = 5
+                start_time = time.time()
+                while not self.running and time.time() - start_time < timeout:
+                    time.sleep(0.1)
+                    
+                if self.running:
+                    # Reset retry count on successful connection
+                    self.retry_count = 0
+                    self.reconnecting = False
+                    return True
+                else:
+                    # Connection didn't establish within timeout
+                    error_msg = "WebSocket connection timed out"
+                    print(error_msg)
+                    self.retry_count += 1
+                    continue
+                    
+            except requests.exceptions.ConnectTimeout as e:
+                error_msg = f"Timeout durante la connessione: {e}"
+                messageBox("Errore Connessione", error_msg, StyleBox.Dash_Bold)
+                self.retry_count += 1
+                continue
+                
+            except requests.exceptions.ConnectionError as e:
+                error_msg = f"Errore di connessione: {e}"
+                messageBox("Errore Connessione", error_msg, StyleBox.Dash_Bold)
+                self.retry_count += 1
+                continue
+                
+            except Exception as e:
+                error_msg = f"Errore durante l'avvio della conversazione: {e}"
+                messageBox("Errore", error_msg, StyleBox.Dash_Bold)
+                self.retry_count += 1
+                continue
+        
+        # If we've exhausted all retries
+        self.reconnecting = False
+        error_msg = f"Impossibile connettersi dopo {self.max_retries} tentativi"
+        messageBox("Errore Connessione", error_msg, StyleBox.Dash_Bold)
+        for callback in self.error_callbacks:
+            callback(error_msg)
+        return False
 
     def send_message(self, text):
-        """Send a message to the bot using REST API"""
+        """Send a message to the bot using REST API with retry mechanism"""
         if not self.conversation_id:
-            error_msg = "No active conversation"
-            print(error_msg)
-            for callback in self.error_callbacks:
-                callback(error_msg)
-            return False
+            error_msg = "Nessuna conversazione attiva"
+            messageBox("Errore", error_msg, StyleBox.Dash_Bold)
+            
+            # Tenta di riavviare la conversazione
+            messageBox("Riconnessione", "Tentativo di riavvio della conversazione...", StyleBox.Light)
+            if not self.start_conversation():
+                for callback in self.error_callbacks:
+                    callback(error_msg)
+                return False
+            
+            # Se la riconnessione ha avuto successo, continua con l'invio del messaggio
+            messageBox("Riconnessione", "Riconnessione riuscita, invio messaggio...", StyleBox.Light)
 
         activity_url = f"{self.url}/{self.conversation_id}/activities"
         body = {
@@ -170,27 +242,79 @@ class IfabChatWebSocket:
             "text": text
         }
 
-        try:
-            # Set waiting flag
-            self.waiting_for_response = True
+        # Imposta un contatore di tentativi per l'invio del messaggio
+        send_retries = 0
+        max_send_retries = 3
+        
+        while send_retries < max_send_retries:
+            try:
+                # Set waiting flag
+                self.waiting_for_response = True
 
-            # Send the message
-            response = requests.post(activity_url, headers=self.headers, json=body)
-            if response.status_code != 200:
-                error_msg = f"Error sending message: {response.status_code}"
-                print(error_msg)
-                for callback in self.error_callbacks:
-                    callback(error_msg)
-                self.waiting_for_response = False
-                return False
-            return True
-        except Exception as e:
-            error_msg = f"Error sending message: {e}"
-            print(error_msg)
-            for callback in self.error_callbacks:
-                callback(error_msg)
-            self.waiting_for_response = False
-            return False
+                # Send the message with timeout
+                messageBox("Invio", f"Invio messaggio (tentativo {send_retries+1}/{max_send_retries})...", StyleBox.Light)
+                response = requests.post(activity_url, headers=self.headers, json=body, timeout=30)
+                
+                if response.status_code != 200:
+                    error_msg = f"Errore nell'invio del messaggio: HTTP {response.status_code}"
+                    messageBox("Errore", error_msg, StyleBox.Dash_Bold)
+                    send_retries += 1
+                    
+                    # Se è un errore di autenticazione o autorizzazione, tenta di riavviare la conversazione
+                    if response.status_code in [401, 403]:
+                        messageBox("Riconnessione", "Tentativo di riavvio della conversazione per errore di autenticazione...", StyleBox.Light)
+                        if self.start_conversation():
+                            # Aggiorna l'URL dell'attività con il nuovo ID conversazione
+                            activity_url = f"{self.url}/{self.conversation_id}/activities"
+                            continue
+                    
+                    # Attendi prima di riprovare
+                    if send_retries < max_send_retries:
+                        time.sleep(2 * send_retries)  # Backoff lineare
+                    continue
+                
+                # Messaggio inviato con successo
+                return True
+                
+            except requests.exceptions.Timeout:
+                error_msg = "Timeout durante l'invio del messaggio"
+                messageBox("Errore", error_msg, StyleBox.Dash_Bold)
+                send_retries += 1
+                if send_retries < max_send_retries:
+                    time.sleep(2 * send_retries)
+                continue
+                
+            except requests.exceptions.ConnectionError as e:
+                error_msg = f"Errore di connessione durante l'invio: {e}"
+                messageBox("Errore", error_msg, StyleBox.Dash_Bold)
+                
+                # Tenta di riavviare la conversazione
+                if self.start_conversation():
+                    # Aggiorna l'URL dell'attività con il nuovo ID conversazione
+                    activity_url = f"{self.url}/{self.conversation_id}/activities"
+                    send_retries += 1
+                    if send_retries < max_send_retries:
+                        time.sleep(2 * send_retries)
+                    continue
+                else:
+                    # Se la riconnessione fallisce, interrompi i tentativi
+                    break
+                    
+            except Exception as e:
+                error_msg = f"Errore durante l'invio del messaggio: {e}"
+                messageBox("Errore", error_msg, StyleBox.Dash_Bold)
+                send_retries += 1
+                if send_retries < max_send_retries:
+                    time.sleep(2 * send_retries)
+                continue
+        
+        # Se arriviamo qui, tutti i tentativi sono falliti
+        self.waiting_for_response = False
+        error_msg = f"Impossibile inviare il messaggio dopo {max_send_retries} tentativi"
+        messageBox("Errore", error_msg, StyleBox.Dash_Bold)
+        for callback in self.error_callbacks:
+            callback(error_msg)
+        return False
 
     def stop_conversation(self):
         """Terminate the current conversation with the bot and reset all variables"""
