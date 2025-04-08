@@ -262,6 +262,14 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
         """Serve temporary audio files"""
         temp_dir = os.path.join(os.path.dirname(__file__), 'temp')
         return send_from_directory(temp_dir, filename)
+        
+    # Aggiungi una route per la pagina "Chi siamo"
+    @app.route('/about')
+    def about():
+        """Serve the about page"""
+        with open(os.path.join(os.path.dirname(__file__), 'web-client/about.html'), 'r') as file:
+            html_content = file.read()
+        return html_content
 
     return app, socketio, chat_client
 

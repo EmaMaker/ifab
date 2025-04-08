@@ -153,6 +153,28 @@ body {
     line-height: 1.6;
 }
 
+.about-us-button {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    padding: 10px 20px;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    z-index: 100;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+}
+
+.about-us-button:hover {
+    background-color: var(--accent-color);
+}
+
 .container {
     max-width: 1200px;
     margin: 0 auto;
@@ -247,9 +269,10 @@ body {
 }
 
 header {
+    position: relative;
+    margin-bottom: 20px;
     text-align: center;
     padding: 10px 0;
-    margin-bottom: 20px;
     border-bottom: 1px solid var(--border-color);
 }
 
