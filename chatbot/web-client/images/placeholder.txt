@@ -1,0 +1,1 @@
+Questo file è un placeholder per assicurare che la cartella delle immagini venga inclusa nel repository.

@@ -9,7 +9,7 @@ from flask_socketio import SocketIO
 
 # Importa la classe IfabChatWebSocket dal ifabChatWebSocket.py
 from ifabChatWebSocket import IfabChatWebSocket
-from util import *
+from pyLib.util import *
 
 """
 Flask WebSocket server per la comunicazione con il bot 
@@ -59,7 +59,7 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
 
     # Inizializzo gli oggetti e li configuro per l'interfaccia grafica
     chat_client = IfabChatWebSocket(url, auth)  # Inizializza il client WebSocket verso il bot
-    app = Flask(__name__, static_folder='.')  # Creo l'istanza dell'app Flask e imposto la cartella statica
+    app = Flask(__name__, static_folder='web-client')  # Creo l'istanza dell'app Flask e imposto la cartella statica
     CORS(app)  # Abilita CORS per tutte le route
     socketio = SocketIO(app, cors_allowed_origins="*")  # Inizializza SocketIO con CORS abilitato tra il backend python ed il frontend Flask
 
@@ -80,22 +80,22 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
     # Aggiungi una route per servire le immagini statiche
     @app.route('/images/<path:filename>')
     def serve_image(filename):
-        return send_from_directory('images', filename)
+        return send_from_directory('web-client/images', filename)
 
     # Aggiungi una route per servire il file CSS
-    @app.route('/styles.css')
-    def serve_css():
-        return send_from_directory('.', 'styles.css')
+    @app.route('/css/<path:filename>')
+    def serve_css(filename):
+        return send_from_directory('web-client/css', filename)
 
     # Aggiungi una route per servire il file JavaScript
-    @app.route('/script.js')
-    def serve_js():
-        return send_from_directory('.', 'script.js')
+    @app.route('/js/<path:filename>')
+    def serve_js(filename):
+        return send_from_directory('web-client/js', filename)
 
     # Aggiungi route per servire le librerie JavaScript locali
     @app.route('/libs/<path:filename>')
     def serve_libs(filename):
-        return send_from_directory('libs', filename)
+        return send_from_directory('web-client/libs', filename)
 
     # Aggiungi una route per servire il file HTML e generare la pagina
     @app.route('/')
@@ -119,7 +119,7 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
 
         # Crea HTML per i pulsanti di sinistra
         # Leggi il contenuto del file HTML
-        with open(os.path.join(os.path.dirname(__file__), 'index.html'), 'r') as file:
+        with open(os.path.join(os.path.dirname(__file__), 'web-client/index.html'), 'r') as file:
             html_content = file.read()
 
         def mkHTMLbutton(buttons):
@@ -174,7 +174,7 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
 
         # Verifica se il testo corrisponde a uno dei pulsanti statici
         is_valid_button = False
-        for text, _ in button_list:
+        for text, _ in button_list_sx + button_list_dx:
             if button_text.strip() == text.strip():
                 is_valid_button = True
                 break

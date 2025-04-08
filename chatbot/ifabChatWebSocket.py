@@ -4,7 +4,7 @@ import time
 
 import requests
 import websocket
-from util import *
+from pyLib.util import *
 
 
 class IfabChatWebSocket:
