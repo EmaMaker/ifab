@@ -1,6 +1,7 @@
-import os
+import shutil
 import threading
 import time
+from typing import Callable
 
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
@@ -10,26 +11,71 @@ from flask_socketio import SocketIO
 from ifabChatWebSocket import IfabChatWebSocket
 from util import *
 
-# Dizionario per tenere traccia delle connessioni socket attive
-active_connections = {}
-
 """
 Flask WebSocket server per la comunicazione con il bot 
 @param url:                 URL del bot
 @param auth:                Token di autenticazione per il bot
 @param button_list_dx/sx:   Lista di tuple contenenti il testo e il percorso dell'immagine per i pulsanti statici
                             [(text, image_path), ...]
+@param sttFun:              Funzione di callback per la trascrizione audio (opzionale)
+                            @param sttFun(pathToAudio) -> Transcription | None
 """
 
 
-def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list_dx: tuple[str, str]) -> tuple[Flask, SocketIO, IfabChatWebSocket]:
+def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list_dx: tuple[str, str], sttFun: Callable[[str], str | None] = None) -> tuple[
+    Flask, SocketIO, IfabChatWebSocket]:
     """Crea e restituisce l'istanza dell'app Flask, socketio e client WebSocket, con tutti i callback"""
 
+    # Callback per gestire l'inoltro dei messaggi dal backend (bot o stt) al frontend
+    # se ho un messaggio ID, allora devo aggiornare quel baloon
+    def backEnd_msg2UI(text, message_id=None):
+        """Callback function for when a message is received from the bot"""
+        if not message_id:  # Nessuno ID messaggio, quindi è un messaggio normale
+            messageBox("Send new message to frontEnd", text, StyleBox.Dash_Light)
+            message_data = {'type': 'message', 'text': text}
+            socketio.emit('message', message_data)
+        else:  #
+            messageBox("Send to frontEnd audio transcription to append", text, StyleBox.Dash_Light)
+            message_data = {'type': 'message', 'text': text, 'messageId': message_id}
+            socketio.emit('stt', message_data)
+        socketio.sleep(0)  # Assicurati che il messaggio venga inviato immediatamente
+
+    def bot_err2UI(error_text):
+        """Callback function for when an error occurs"""
+        socketio.emit('message', {'type': 'error', 'text': error_text})
+
+    # Mock function for STT (Speech-to-Text) processing
+    def stt_mock(audio_path=None) -> str | None:
+        """Elaborate the audio message with speech-to-text processing"""
+        # This would typically involve sending the audio file to a speech-to-text service
+        # and then sending the resulting text to the bot
+        # For now, we'll just send a placeholder message
+        if not audio_path:
+            print("No audio data provided")
+            return None
+        print("Audio data received")
+        time.sleep(1)  # Simulate processing time
+        return f"Trascrizione del messaggio, Mock per {os.path.basename(audio_path)}"
+
+    # Inizializzo gli oggetti e li configuro per l'interfaccia grafica
     chat_client = IfabChatWebSocket(url, auth)  # Inizializza il client WebSocket verso il bot
     app = Flask(__name__, static_folder='.')  # Creo l'istanza dell'app Flask e imposto la cartella statica
     CORS(app)  # Abilita CORS per tutte le route
     socketio = SocketIO(app, cors_allowed_origins="*")  # Inizializza SocketIO con CORS abilitato tra il backend python ed il frontend Flask
-    button_list = button_list_dx + button_list_sx  # Unisco le liste di pulsanti
+
+    # Configurazione delle callback esterne
+    stt_funx = sttFun if sttFun else stt_mock  # Se non viene fornita una funzione STT, usa la funzione di mock
+    # TODO: Callback a piper per gestire la creazione degli audio
+
+    # Registra i callback per gestire l'inoltro dei messaggi dal bot al frontend
+    chat_client.add_message_callback(backEnd_msg2UI)
+    chat_client.add_error_callback(bot_err2UI)
+
+    # Crea una directory temporanea vuota all'avvio del server
+    temp_dir = os.path.join(os.path.dirname(__file__), 'temp')
+    if os.path.exists(temp_dir):
+        shutil.rmtree(temp_dir)  # Rimuovi la directory temporanea esistente
+    os.makedirs(temp_dir, exist_ok=True)
 
     # Aggiungi una route per servire le immagini statiche
     @app.route('/images/<path:filename>')
@@ -157,12 +203,6 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
             return jsonify({'success': False, 'error': 'No audio file provided'}), 400
         audio_file = request.files['audio']
 
-        # Crea una directory temporanea se non esiste
-        # TODO: Far creare vuota la diretory temp per ogni nuova connessione, e cancellare alla chiusura della connessione.
-        #   Quando il server viene riavviato, tutte le directory temp pre esistenti vengono cancellate
-        temp_dir = os.path.join(os.path.dirname(__file__), 'temp')
-        os.makedirs(temp_dir, exist_ok=True)
-
         # Genera un nome file univoco con timestamp
         timestamp = time.strftime("%Y%m%d-%H%M%S")
         temp_path = os.path.join(temp_dir, f'audio_{timestamp}.wav')
@@ -181,11 +221,25 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
         # Crea un ID messaggio basato sul timestamp
         message_id = f"audio_{timestamp}"
 
-        # Invia il messaggio audio al bot in un thread separato
-        def send_audio_thread():
-            chat_client.send_audio_message(audio_path=temp_path, message_id=message_id)
+        # Invia il messaggio audio al bot in un thread separato per non bloccare la risposta HTTP
+        def send_audio_thread(audio_path, message_id):
+            stt_audio_text = stt_funx(audio_path=audio_path)
+            if stt_audio_text:
+                messageBox("Backend audio STT", f"Trascrizione audio: {stt_audio_text}", StyleBox.Light)
+                backEnd_msg2UI(stt_audio_text, message_id=message_id)  # Invia messaggio trascritto al frontend
+                if stt_funx is not stt_mock:  # Invia messaggio trascritto al bot solo se veramente trascritto
+                    messageBox("Backend audio STT to Bot", "Trascrizione audio inviata al bot", StyleBox.Light)
+                    chat_client.send_message(stt_audio_text)
+                else:
+                    time.sleep(1)  # Simula un breve ritardo per il mock
+                    messageBox("Backend audio STT to Bot", "Trascrizione audio non inviata al bot, Mock STT", StyleBox.Light)
+                    backEnd_msg2UI("Trascrizione audio non inviata al bot, Mock STT")  # Invia messaggio mock al frontend
 
-        threading.Thread(target=send_audio_thread).start()
+            else:
+                messageBox("Backend audio STT", "Errore durante la trascrizione audio", StyleBox.Light)
+                backEnd_msg2UI("Impossibile trascrivere il messaggio audio", message_id=message_id)
+
+        threading.Thread(target=send_audio_thread, args=(temp_path, message_id,)).start()
 
         return jsonify({'success': True, 'file_path': audio_url, 'message_id': message_id})
 
@@ -195,49 +249,6 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
         """Serve temporary audio files"""
         temp_dir = os.path.join(os.path.dirname(__file__), 'temp')
         return send_from_directory(temp_dir, filename)
-
-    # Aggiungi una route per gestire la connessione WebSocket tra backend e frontend
-    @socketio.on('connect')
-    def handle_connect():
-        """Handle new WebSocket connections"""
-        client_id = request.sid
-        active_connections[client_id] = True
-        print(f"Client connected: {client_id}")
-
-        # Avvia la conversazione se non è già attiva
-        if not chat_client.running:
-            chat_client.start_conversation()
-
-    # Aggiungi una route per gestire la disconnessione WebSocket
-    @socketio.on('disconnect')
-    def handle_disconnect():
-        """Handle WebSocket disconnections"""
-        client_id = request.sid
-        if client_id in active_connections:
-            del active_connections[client_id]
-        print(f"Client disconnected: {client_id}")
-
-    # Callback per gestire l'inoltro dei messaggi dal bot al frontend
-    # se ho un messaggio ID, allora devo aggiornare quel baloon
-    def message_callback(text, message_id=None):
-        """Callback function for when a message is received from the bot"""
-        if not message_id:
-            messageBox("Send to frontEnd", text, StyleBox.Dash_Light)
-            message_data = {'type': 'message', 'text': text}
-            socketio.emit('message', message_data)
-        else:
-            messageBox("Send to frontEnd audio transcription", text, StyleBox.Dash_Light)
-            message_data = {'type': 'message', 'text': text, 'messageId': message_id}
-            socketio.emit('stt', message_data)
-        socketio.sleep(0)  # Assicurati che il messaggio venga inviato immediatamente
-
-    def error_callback(error_text):
-        """Callback function for when an error occurs"""
-        socketio.emit('message', {'type': 'error', 'text': error_text})
-
-    # Registra i callback per gestire l'inoltro dei messaggi dal bot al frontend
-    chat_client.add_message_callback(message_callback)
-    chat_client.add_error_callback(error_callback)
 
     return app, socketio, chat_client
 

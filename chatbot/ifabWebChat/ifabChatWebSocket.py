@@ -4,14 +4,13 @@ import time
 
 import requests
 import websocket
-
 from util import *
 
 
 class IfabChatWebSocket:
     """ Class to manage WebSocket connection to the Ifab Chatbot API and the backend"""
 
-    def __init__(self, url, auth_token, user_id="user1", port=8000):
+    def __init__(self, url, auth_token, user_id="user1"):
         # Connection parameters
         self.url = url
         self.headers = {
@@ -19,7 +18,6 @@ class IfabChatWebSocket:
             "Content-Type": "application/json"
         }
         self.user_id = user_id
-        self.port = port
         # State variables
         self.conversation_id = None
         self.ws = None
@@ -186,41 +184,6 @@ class IfabChatWebSocket:
             self.waiting_for_response = False
             return False
 
-    def send_audio_message(self, audio_path=None, message_id=None):
-        """Send an audio message to the bot for speech-to-text processing"""
-        # This would typically involve sending the audio file to a speech-to-text service
-        # and then sending the resulting text to the bot
-        # For now, we'll just send a placeholder message
-        if not audio_path:
-            print("No audio data provided")
-            return False
-        print("Audio data received")
-
-        # Estrai l'ID del messaggio dal percorso del file se non fornito
-        if not message_id and audio_path:
-            # Prova a estrarre un ID dal nome del file audio
-            filename = os.path.basename(audio_path)
-            if filename.startswith('audio_'):
-                message_id = 'audio_' + filename.split('_')[1].split('.')[0]
-
-        # Avvia un thread separato per simulare l'elaborazione della trascrizione
-        def transcription_thread(audio_path, message_id):
-            # Qui in futuro si implementerà l'analisi STT reale
-            # Per ora restituiamo un messaggio fisso come richiesto
-            # Attendi 3 secondi come richiesto
-            time.sleep(1)
-            # Invia la trascrizione con l'ID del messaggio
-            for callback in self.message_callbacks:
-                callback(f"Trascrizione del messaggio, Mock", message_id)
-            time.sleep(2)
-            for callback in self.message_callbacks:
-                callback(f"Messaggio audio non ancora supportato:\n{message_id}")
-
-        # Avvia il thread di trascrizione
-        if audio_path:
-            threading.Thread(target=transcription_thread, args=(audio_path, message_id)).start()
-            return True
-
     def close(self):
         """Close the WebSocket connection"""
         if self.ws:
@@ -228,3 +191,48 @@ class IfabChatWebSocket:
             self.running = False
             if self.ws_thread and self.ws_thread.is_alive():
                 self.ws_thread.join(timeout=1)
+
+
+if __name__ == '__main__':
+
+    # Inizializza il client WebSocket per la comunicazione con il bot
+    # Token Bot Ema:
+    # url = "https://europe.directline.botframework.com/v3/directline/conversations"
+    # auth = "Bearer Ec99xFUkF1i7cR8m5TLtPokIlKXvLNdCxIYyDsraweBmf2zltwUZJQQJ99BCACi5YpzAArohAAABAZBSECEz.IpVjYOfmWMOQOHYGdH4G16pGKUArN1pEpAGJebfBjSrKI71E6ZhDJQQJ99BCACi5YpzAArohAAABAZBSMCrh"
+    # Token Bot Fondazione:
+    url = "https://europe.directline.botframework.com/v3/directline/conversations"
+    auth = "Bearer BI91xBzzXppQiRxyBjniBLPFctD8IGqIR0BCmQCyODxSZrZjLX7QJQQJ99BDACi5YpzAArohAAABAZBS4vKQ.DEsKhbDDeYsTi7cHcOgSMV4HrdEnNrJAPp8hTnCv55nxFqtKRfonJQQJ99BDACi5YpzAArohAAABAZBS4AHw"
+
+
+    chat = IfabChatWebSocket(url, auth, user_id="user1")
+
+    if not chat.start_conversation():
+        print("Failed to start conversation")
+        exit(1)
+
+    try:
+        print("Chat started. Type 'exit', 'quit', or 'esci' to end the conversation.")
+        while True:
+            if not chat.running:
+                print("WebSocket connection lost. Attempting to reconnect...")
+                if not chat.start_conversation():
+                    print("Failed to reconnect")
+                    break
+            # Only show the input prompt when not waiting for a response
+            if not chat.waiting_for_response:
+                user_input = input("Tu: ")
+
+                if user_input.lower() in ["exit", "quit", "esci"]:
+                    break
+
+                if not chat.send_message(user_input):
+                    print("Failed to send message")
+                    break
+            else:
+                # Small sleep to prevent CPU hogging in the loop
+                time.sleep(0.1)
+    except KeyboardInterrupt:
+        print("\nChat terminated by user")
+    finally:
+        chat.close()
+        print("Chat session ended")
