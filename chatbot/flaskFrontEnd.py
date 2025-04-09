@@ -26,7 +26,7 @@ Flask WebSocket server per la comunicazione con il bot
 """
 
 
-def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list_dx: tuple[str, str],
+def create_app(url: str, auth: str, jobStation_list_top: tuple[str, str], machine_list_bot: tuple[str, str],
                sttFun: Callable[[str], str | None] = None,
                ttsFun: Callable[[str], None] = None) -> tuple[
     Flask, SocketIO, IfabChatWebSocket]:
@@ -154,8 +154,8 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
                     verified_buttons.append((text, None))
             return verified_buttons
 
-        right_buttons = verify_buttons(button_list_dx)
-        left_buttons = verify_buttons(button_list_sx)
+        machine_buttons = verify_buttons(machine_list_bot)
+        job_station_buttons = verify_buttons(jobStation_list_top)
 
         # Crea HTML per i pulsanti di sinistra
         # Leggi il contenuto del file HTML
@@ -175,8 +175,8 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
             return html
 
         # Sostituisci i placeholder nel template
-        html_content = html_content.replace('<!-- STATIC_BUTTONS_LEFT -->', mkHTMLbutton(left_buttons))
-        html_content = html_content.replace('<!-- STATIC_BUTTONS_RIGHT -->', mkHTMLbutton(right_buttons))
+        html_content = html_content.replace('<!-- STATIC_BUTTONS_JOB_STATION -->', mkHTMLbutton(job_station_buttons))
+        html_content = html_content.replace('<!-- STATIC_BUTTONS_MACHINE -->', mkHTMLbutton(machine_buttons))
 
         return html_content
 
@@ -223,7 +223,7 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
 
         # Verifica se il testo corrisponde a uno dei pulsanti statici
         is_valid_button = False
-        for text, _ in button_list_sx + button_list_dx:
+        for text, _ in jobStation_list_top + machine_list_bot:
             if button_text.strip() == text.strip():
                 is_valid_button = True
                 break
@@ -370,18 +370,18 @@ if __name__ == '__main__':
     auth = "Bearer BI91xBzzXppQiRxyBjniBLPFctD8IGqIR0BCmQCyODxSZrZjLX7QJQQJ99BDACi5YpzAArohAAABAZBS4vKQ.DEsKhbDDeYsTi7cHcOgSMV4HrdEnNrJAPp8hTnCv55nxFqtKRfonJQQJ99BDACi5YpzAArohAAABAZBS4AHw"
 
     # Lista di pulsanti statici (testo, percorso_immagine)
-    button_sx = [
+    zone_lavoro = [
         ("Zona saldatura", "web-client/images/The_Help_Logo.svg.png"),
-        ("Zona debug", "images/weather.jpg"),
+        ("Zona debug", "web-client/images/weather.jpg"),
         ("Zona prototipazione", "images/news.jpg"),
     ]
-    button_dx = [
-        ("Tagliatrice Laser", "images/info.jpg"),
-        ("Stampante 3D", "images/commands.jpg"),
-        ("CNC", "images/music.jpg"),
-        ("Stampante Plotter", "images/info.jpg"),
+    macchinari = [
+        ("Tagliatrice Laser", "web-client/images/info.jpg"),
+        ("Stampante 3D", "web-client/images/commands.jpg"),
+        ("CNC", "web-client/images/music.jpg"),
+        ("Stampante Plotter", "web-client/images/info.jpg"),
     ]
-    app, socketio, chat_client = create_app(url, auth, button_sx, button_dx, ttsFun=player.play_text)  # Crea l'app Flask e SocketIO
+    app, socketio, chat_client = create_app(url, auth, zone_lavoro, macchinari, ttsFun=player.play_text)  # Crea l'app Flask e SocketIO
 
     # Avvia il server Flask con SocketIO
     socketio.run(app, host=args.host, port=args.port, debug=True, allow_unsafe_werkzeug=True)  # Avvia il server Flask con SocketIO

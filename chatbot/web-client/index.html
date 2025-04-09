@@ -34,17 +34,11 @@
     </header>
 
     <div class="main-layout">
-        <div class="buttons-container left-buttons">
-            <!-- Pulsanti statici a sinistra -->
-            <!-- STATIC_BUTTONS_LEFT -->
-        </div>
-
         <div class="chat-container" id="chatContainer">
             <div class="message-container" id="messageContainer">
                 <!-- Messages will be added here dynamically -->
             </div>
 
-            <!-- TODO: metterlo su un layer superiore, come l'input-container ma sullo sfondo della chat -->
             <div class="status" id="status"></div>
 
             <div class="input-container">
@@ -63,9 +57,18 @@
             </div>
         </div>
 
-        <div class="buttons-container right-buttons">
-            <!-- Pulsanti statici a destra -->
-            <!-- STATIC_BUTTONS_RIGHT -->
+        <div class="buttons-container">
+            <div class="right-box">
+                <div class="right-box-title">Zone di lavoro</div>
+                <!-- Pulsanti statici in alto -->
+                <!-- STATIC_BUTTONS_JOB_STATION -->
+            </div>
+            
+            <div class="right-box">
+                <div class="right-box-title">Macchinari</div>
+                <!-- Pulsanti statici in basso -->
+                <!-- STATIC_BUTTONS_MACHINE -->
+            </div>
         </div>
     </div>
 </div>
