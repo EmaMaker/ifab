@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Gestisci gli errori di connessione
     socket.on('connect_error', function (error) {
         console.error('Connection error:', error);
-        addBotMessage('Errore di connessione al server. Riprova più tardi.');
+        addErrorMessage('Errore di connessione al server. Riprova più tardi.');
         hideLoading();
 
         // Tenta di riconnettersi automaticamente dopo un breve ritardo
@@ -120,7 +120,8 @@ document.addEventListener('DOMContentLoaded', function () {
         
         // Verifica se è un messaggio di errore
         if (text.startsWith('Errore:')) {
-            messageDiv.className = 'message error-message';
+            addErrorMessage(text.substring(7).trim()); // Rimuove 'Errore: ' e spazi
+            return;
         } else {
             messageDiv.className = 'message bot-message with-icon';
             
@@ -136,6 +137,20 @@ document.addEventListener('DOMContentLoaded', function () {
         
         // Utilizziamo marked per convertire il testo Markdown in HTML
         messageDiv.innerHTML += marked.parse(text);
+        messageContainer.appendChild(messageDiv);
+        if (wasAtBottom) {
+            scrollToBottom();
+        }
+    }
+    
+    // Funzione dedicata per aggiungere messaggi di errore
+    function addErrorMessage(text) {
+        const wasAtBottom = isUserAtBottom();
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message error-message';
+        
+        // Utilizziamo marked per convertire il testo Markdown in HTML
+        messageDiv.innerHTML = marked.parse(text);
         messageContainer.appendChild(messageDiv);
         if (wasAtBottom) {
             scrollToBottom();
@@ -300,7 +315,7 @@ document.addEventListener('DOMContentLoaded', function () {
             })
             .catch(error => {
                 console.error('Error:', error);
-                addBotMessage('Si è verificato un errore durante l\'invio del messaggio.');
+                addErrorMessage("Si è verificato un errore durante l'invio del messaggio.");
                 hideLoading();
             });
     }
@@ -492,7 +507,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         } catch (error) {
             console.error('Error starting recording:', error);
-            addBotMessage('Si è verificato un errore durante l\'avvio della registrazione.');
+            addErrorMessage("Si è verificato un errore durante l'avvio della registrazione.");
             cleanupAudioResources();
         }
     }
@@ -639,7 +654,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    addBotMessage('Si è verificato un errore durante l\'invio del comando.');
+                    addErrorMessage("Si è verificato un errore durante l'invio del comando.");
                 });
         });
     });

@@ -34,12 +34,12 @@ def create_app(url: str, auth: str, jobStation_list_top: tuple[str, str], machin
 
     # Callback per gestire l'inoltro dei messaggi dal backend (bot o stt) al frontend
     # se ho un messaggio ID, allora devo aggiornare quel baloon
-    def backEnd_msg2UI(text, message_id=None):
+    def backEnd_msg2UI(text, message_id=None, audio_enable=True):
         """Callback function for when a message is received from the bot"""
         if not message_id:  # Nessuno ID messaggio, quindi è un messaggio normale
             messageBox("Send new message to frontEnd", text, StyleBox.Dash_Light)
             message_data = {'type': 'message', 'text': text}
-            if ttsFun:
+            if ttsFun and audio_enable:
                 # Pulisci il testo da elementi Markdown prima di inviarlo al TTS
                 clean_text = clean_markdown_for_tts(text)
                 messageBox("Send to TTS", clean_text, StyleBox.Dash_Light)
@@ -53,6 +53,7 @@ def create_app(url: str, auth: str, jobStation_list_top: tuple[str, str], machin
 
     def bot_err2UI(error_text):
         """Callback function for when an error occurs"""
+        messageBox("Errore invio al frontend", error_text, StyleBox.Error)
         socketio.emit('message', {'type': 'error', 'text': error_text})
 
     # Mock function for STT (Speech-to-Text) processing
@@ -82,6 +83,12 @@ def create_app(url: str, auth: str, jobStation_list_top: tuple[str, str], machin
     chat_client.add_message_callback(backEnd_msg2UI)
     chat_client.add_error_callback(bot_err2UI)
 
+    # Crea una directory temporanea vuota all'avvio del server
+    temp_dir = os.path.join(os.path.dirname(__file__), 'temp')
+    if os.path.exists(temp_dir):
+        shutil.rmtree(temp_dir)  # Rimuovi la directory temporanea esistente
+    os.makedirs(temp_dir, exist_ok=True)
+
     # Gestione dell'evento di connessione Socket.IO
     @socketio.on('connect')
     def handle_connect():
@@ -89,7 +96,7 @@ def create_app(url: str, auth: str, jobStation_list_top: tuple[str, str], machin
         messageBox("Nuova connessione frontend", "Avvio nuova conversazione con il bot", StyleBox.Dash_Bold)
 
         # Invia un messaggio di benvenuto all'utente
-        socketio.emit('message', {'type': 'message', 'text': 'Benvenuto! Puoi scrivere un messaggio o registrare un messaggio vocale.'})
+        backEnd_msg2UI('Benvenuto! Puoi scrivere un messaggio o registrare un messaggio vocale.', audio_enable=False)
 
         # Gestione più robusta della connessione
         try:
@@ -102,16 +109,11 @@ def create_app(url: str, auth: str, jobStation_list_top: tuple[str, str], machin
             # Tenta di avviare una nuova conversazione
             if not chat_client.start_conversation():
                 messageBox("Errore connessione", "Impossibile avviare la conversazione con il bot", StyleBox.Error)
+                # Invia un messaggio di errore al frontend
                 socketio.emit('message', {'type': 'error', 'text': 'Impossibile avviare la conversazione con il bot'})
         except Exception as e:
             messageBox("Errore connessione", f"Errore durante l'avvio della conversazione: {str(e)}", StyleBox.Error)
             socketio.emit('message', {'type': 'error', 'text': f'Errore durante la connessione: {str(e)}'})
-
-    # Crea una directory temporanea vuota all'avvio del server
-    temp_dir = os.path.join(os.path.dirname(__file__), 'temp')
-    if os.path.exists(temp_dir):
-        shutil.rmtree(temp_dir)  # Rimuovi la directory temporanea esistente
-    os.makedirs(temp_dir, exist_ok=True)
 
     # Aggiungi una route per servire le immagini statiche
     @app.route('/images/<path:filename>')
@@ -196,6 +198,7 @@ def create_app(url: str, auth: str, jobStation_list_top: tuple[str, str], machin
             if not chat_client.running:
                 messageBox("Riconnessione", "Tentativo di riavvio della conversazione", StyleBox.Light)
                 if not chat_client.start_conversation():
+                    messageBox("Errore connessione", "Impossibile avviare la conversazione", StyleBox.Error)
                     return jsonify({'success': False, 'error': 'Impossibile avviare la conversazione'}), 500
                 # Breve pausa per assicurarsi che la connessione sia stabilita
                 time.sleep(0.5)
@@ -274,6 +277,9 @@ def create_app(url: str, auth: str, jobStation_list_top: tuple[str, str], machin
             if not chat_client.running:
                 messageBox("Riconnessione", "Tentativo di riavvio della conversazione per audio", StyleBox.Light)
                 if not chat_client.start_conversation():
+                    messageBox("Errore connessione", "Impossibile avviare la conversazione per audio", StyleBox.Error)
+                    # Invia un messaggio di errore al frontend
+                    socketio.emit('message', {'type': 'error', 'text': 'Impossibile avviare la conversazione. Riprova più tardi.'})
                     return jsonify({'success': False, 'error': 'Impossibile avviare la conversazione'}), 500
                 # Breve pausa per assicurarsi che la connessione sia stabilita
                 time.sleep(0.5)

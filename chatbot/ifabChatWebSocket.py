@@ -211,7 +211,7 @@ class IfabChatWebSocket:
         # If we've exhausted all retries
         self.reconnecting = False
         error_msg = f"Impossibile connettersi dopo {self.max_retries} tentativi"
-        messageBox("Errore Connessione", error_msg, StyleBox.Dash_Bold)
+        messageBox("Errore Connessione", error_msg, StyleBox.Error)
         for callback in self.error_callbacks:
             callback(error_msg)
         return False
