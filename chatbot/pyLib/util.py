@@ -1,7 +1,7 @@
 import os
+import traceback
 from enum import Enum, auto
 from textwrap import TextWrapper, indent
-import traceback
 
 
 class StyleBox(Enum):

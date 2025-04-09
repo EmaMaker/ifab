@@ -53,8 +53,8 @@ python flaskFrontEnd.py
 2. Apri un browser e vai all'indirizzo: http://localhost:8000
 
 3. Ora puoi:
-   - Digitare un messaggio e premere invio o il pulsante di invio
-   - Cliccare sul pulsante del microfono per registrare un messaggio vocale
+    - Digitare un messaggio e premere invio o il pulsante di invio
+    - Cliccare sul pulsante del microfono per registrare un messaggio vocale
 
 ## Note sull'implementazione
 
@@ -76,6 +76,7 @@ python flaskFrontEnd.py
 ### In `flaskFrontEnd.py`
 
 Quando eseguito direttamente (`python flaskFrontEnd.py`), questo blocco:
+
 - Configura e avvia il server Flask con SocketIO
 - Accetta parametri da linea di comando per host e porta
 - Inizializza la connessione con il bot IFAB
@@ -92,6 +93,7 @@ if __name__ == '__main__':
 ### In `ifabChatWebSocket.py`
 
 Quando eseguito direttamente, questo blocco:
+
 - Crea un'istanza della classe IfabChatWebSocket
 - Avvia una sessione di chat testuale in modalità console
 - Utile per testare la connessione con il bot senza l'interfaccia web
@@ -102,4 +104,5 @@ if __name__ == '__main__':
     # Avvio di una sessione di chat testuale in console
 ```
 
-Questi blocchi permettono ai file di funzionare sia come moduli importabili che come script eseguibili direttamente, facilitando lo sviluppo e il testing dei componenti in modo indipendente.
+Questi blocchi permettono ai file di funzionare sia come moduli importabili che come script eseguibili direttamente, facilitando lo sviluppo e il testing dei componenti in modo
+indipendente.

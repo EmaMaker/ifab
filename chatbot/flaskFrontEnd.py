@@ -1,4 +1,3 @@
-from pydoc import text
 import shutil
 import threading
 import time
@@ -11,8 +10,8 @@ from flask_socketio import SocketIO
 # Importa la classe IfabChatWebSocket dal ifabChatWebSocket.py
 from ifabChatWebSocket import IfabChatWebSocket
 from pyLib import AudioPlayer as ap
-from pyLib.util import *
 from pyLib.text_utils import clean_markdown_for_tts
+from pyLib.util import *
 
 """
 Flask WebSocket server per la comunicazione con il bot 
@@ -82,16 +81,16 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
     # Registra i callback per gestire l'inoltro dei messaggi dal bot al frontend
     chat_client.add_message_callback(backEnd_msg2UI)
     chat_client.add_error_callback(bot_err2UI)
-    
+
     # Gestione dell'evento di connessione Socket.IO
     @socketio.on('connect')
     def handle_connect():
         """Gestisce l'evento di connessione di un client Socket.IO"""
         messageBox("Nuova connessione frontend", "Avvio nuova conversazione con il bot", StyleBox.Dash_Bold)
-        
+
         # Invia un messaggio di benvenuto all'utente
         socketio.emit('message', {'type': 'message', 'text': 'Benvenuto! Puoi scrivere un messaggio o registrare un messaggio vocale.'})
-        
+
         # Gestione più robusta della connessione
         try:
             if chat_client.running:
@@ -99,7 +98,7 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
                 chat_client.stop_conversation()
                 # Breve pausa per assicurarsi che la connessione precedente sia completamente chiusa
                 time.sleep(0.5)
-            
+
             # Tenta di avviare una nuova conversazione
             if not chat_client.start_conversation():
                 messageBox("Errore connessione", "Impossibile avviare la conversazione con il bot", StyleBox.Error)
@@ -302,7 +301,7 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
 
             threading.Thread(target=send_audio_thread, args=(temp_path, message_id,)).start()
             return jsonify({'success': True, 'file_path': audio_url, 'message_id': message_id})
-            
+
         except Exception as e:
             messageBox("Errore audio", f"Errore durante l'elaborazione dell'audio: {str(e)}", StyleBox.Error)
             return jsonify({'success': False, 'error': f'Errore durante l\'elaborazione: {str(e)}'}), 500
@@ -313,7 +312,7 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
         """Serve temporary audio files"""
         temp_dir = os.path.join(os.path.dirname(__file__), 'temp')
         return send_from_directory(temp_dir, filename)
-        
+
     # Aggiungi una route per verificare lo stato della connessione
     @app.route('/check-connection', methods=['GET'])
     def check_connection():
@@ -322,12 +321,12 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
         if not is_connected:
             # Tenta di riavviare la connessione se non è attiva
             is_connected = chat_client.start_conversation()
-        
+
         return jsonify({
             'connected': is_connected,
             'status': 'active' if is_connected else 'disconnected'
         })
-        
+
     # Aggiungi una route per la pagina "Chi siamo"
     @app.route('/about')
     def about():
@@ -335,7 +334,7 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
         with open(os.path.join(os.path.dirname(__file__), 'web-client/about.html'), 'r') as file:
             html_content = file.read()
         return html_content
-        
+
     # Gestione dell'evento di disconnessione Socket.IO
     @socketio.on('disconnect')
     def handle_disconnect():

@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Aggiungi event listener per il ridimensionamento automatico
     messageInput.addEventListener('input', autoResizeTextarea);
-    messageInput.addEventListener('keydown', function(e) {
+    messageInput.addEventListener('keydown', function (e) {
         if (e.key === 'Enter' && e.shiftKey) {
             setTimeout(autoResizeTextarea, 0);
         }
@@ -57,16 +57,16 @@ document.addEventListener('DOMContentLoaded', function () {
         console.error('Connection error:', error);
         addBotMessage('Errore di connessione al server. Riprova più tardi.');
         hideLoading();
-        
+
         // Tenta di riconnettersi automaticamente dopo un breve ritardo
-        setTimeout(function() {
+        setTimeout(function () {
             console.log('Tentativo di riconnessione automatica...');
             socket.connect();
         }, 3000);
     });
-    
+
     // Gestisci la riconnessione
-    socket.on('reconnect', function(attemptNumber) {
+    socket.on('reconnect', function (attemptNumber) {
         console.log('Riconnesso al server dopo ' + attemptNumber + ' tentativi');
         // Verifica lo stato della connessione con il backend
         fetch('/check-connection')
@@ -80,9 +80,9 @@ document.addEventListener('DOMContentLoaded', function () {
             })
             .catch(err => console.error('Errore durante la verifica della connessione:', err));
     });
-    
+
     // Gestisci la disconnessione
-    socket.on('disconnect', function(reason) {
+    socket.on('disconnect', function (reason) {
         console.log('Disconnesso dal server, motivo: ' + reason);
         // Non mostrare messaggi di errore per disconnessioni normali durante il refresh
         if (reason !== 'io client disconnect' && reason !== 'transport close') {
@@ -527,7 +527,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (e.shiftKey) {
                 // Permette l'inserimento di una nuova riga quando si preme Shift+Invio
                 // Non facciamo nulla, lasciando che il comportamento predefinito inserisca una nuova riga
-                return;
+
             } else {
                 e.preventDefault();
                 sendTextMessage(messageInput.value.trim());

@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <title>IFAB Web Chat</title>
     <!-- Inclusione delle librerie esterne con fallback locale -->
     <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
@@ -12,7 +12,7 @@
             document.write('<script src="/libs/socket.io.min.js"><\/script>');
         }
     </script>
-    
+
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script>
         // Fallback per marked.js se il CDN fallisce
@@ -20,14 +20,14 @@
             document.write('<script src="/libs/marked.min.js"><\/script>');
         }
     </script>
-    
-    <link rel="stylesheet" href="/css/styles.css">
+
+    <link href="/css/styles.css" rel="stylesheet">
 </head>
 <body>
 <div class="container">
     <header>
         <h1>IFAB Web Chat</h1>
-        <a href="/about" class="about-us-button">Chi siamo</a>
+        <a class="about-us-button" href="/about">Chi siamo</a>
     </header>
 
     <div class="main-layout">
@@ -42,17 +42,17 @@
             </div>
 
             <!-- TODO: metterlo su un layer superiore, come l'input-container ma sullo sfondo della chat -->
-            <div id="status" class="status"></div>
+            <div class="status" id="status"></div>
 
             <div class="input-container">
-                <button id="recordButton" class="btn btn-record">
+                <button class="btn btn-record" id="recordButton">
                     <svg class="mic-icon" viewBox="0 0 24 24">
                         <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
                         <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
                     </svg>
                 </button>
-                <textarea type="text" id="messageInput" class="text-input" placeholder="Scrivi un messaggio..." autocomplete="off"></textarea>
-                <button id="sendButton" class="btn btn-send">
+                <textarea autocomplete="off" class="text-input" id="messageInput" placeholder="Scrivi un messaggio..." type="text"></textarea>
+                <button class="btn btn-send" id="sendButton">
                     <svg class="send-icon" viewBox="0 0 24 24">
                         <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
                     </svg>
