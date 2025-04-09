@@ -117,9 +117,25 @@ document.addEventListener('DOMContentLoaded', function () {
     function addBotMessage(text) {
         const wasAtBottom = isUserAtBottom();
         const messageDiv = document.createElement('div');
-        messageDiv.className = 'message bot-message';
+        
+        // Verifica se è un messaggio di errore
+        if (text.startsWith('Errore:')) {
+            messageDiv.className = 'message error-message';
+        } else {
+            messageDiv.className = 'message bot-message with-icon';
+            
+            // Aggiungi l'icona del bot
+            const iconDiv = document.createElement('div');
+            iconDiv.className = 'bot-icon';
+            const iconImg = document.createElement('img');
+            iconImg.src = '/images/BotChat.jpeg';
+            iconImg.alt = 'Bot';
+            iconDiv.appendChild(iconImg);
+            messageDiv.appendChild(iconDiv);
+        }
+        
         // Utilizziamo marked per convertire il testo Markdown in HTML
-        messageDiv.innerHTML = marked.parse(text);
+        messageDiv.innerHTML += marked.parse(text);
         messageContainer.appendChild(messageDiv);
         if (wasAtBottom) {
             scrollToBottom();

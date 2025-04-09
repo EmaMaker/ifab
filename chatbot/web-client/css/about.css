@@ -1,3 +1,20 @@
+.chat-button {
+    padding: 8px 8px 8px 25px;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+    margin-right: auto;
+    position: relative;
+    clip-path: polygon(0 50%, 15% 100%, 100% 100%, 100% 0, 15% 0);
+}
+
 .about-container {
     max-width: 800px;
     margin: 0 auto;
@@ -40,6 +57,13 @@
     align-items: center;
     justify-content: center;
     border: 1px solid #ddd;
+    overflow: hidden;
+}
+
+.qr-code-image {
+    max-width: 100%;
+    max-height: 100%;
+    display: block;
 }
 
 .back-button {
@@ -55,4 +79,30 @@
 
 .back-button:hover {
     background-color: var(--accent-color);
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px;
+    position: relative;
+}
+
+.title-group {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.title-group h1 {
+    margin: 0;
+}
+
+.header-icon {
+    width: 40px;
+    height: 40px;
 }

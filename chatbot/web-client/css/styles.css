@@ -9,6 +9,7 @@
     --user-message-bg: #f0f0f0;
     --recording-color: #ff4d4d;
     --volume-indicator-color: rgba(255, 77, 77, 0.3);
+    --error-message-bg: #ffebcc; /* Colore arancione chiaro per i messaggi di errore */
 }
 
 .volume-indicator {
@@ -67,6 +68,34 @@
 
 /* Stili per il contenuto Markdown nei messaggi del bot */
 .bot-message {
+    white-space: pre-wrap;
+    word-break: break-word;
+    position: relative;
+}
+
+.with-icon {
+    padding-left: 40px; /* Spazio per l'icona */
+}
+
+.bot-icon {
+    position: absolute;
+    left: 5px;
+    top: 5px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    overflow: hidden;
+}
+
+.bot-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.error-message {
+    background-color: var(--error-message-bg) !important;
+    border-left: 4px solid #ff9800; /* Bordo arancione per evidenziare l'errore */
     white-space: pre-wrap;
     word-break: break-word;
 }
@@ -153,11 +182,21 @@ body {
     line-height: 1.6;
 }
 
+.header-icon {
+    width: 32px;
+    height: 32px;
+    margin-right: 10px;
+    vertical-align: middle;
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
 .about-us-button {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    padding: 10px 20px;
+    padding: 8px 15px 8px 8px;
     background-color: var(--primary-color);
     color: white;
     border: none;
@@ -165,10 +204,12 @@ body {
     font-size: 1rem;
     cursor: pointer;
     transition: background-color 0.3s;
-    z-index: 100;
     text-decoration: none;
     display: inline-block;
     text-align: center;
+    margin-left: auto;
+    position: relative;
+    clip-path: polygon(0 0, 85% 0, 100% 50%, 85% 100%, 0 100%);
 }
 
 .about-us-button:hover {
@@ -271,9 +312,20 @@ body {
 header {
     position: relative;
     margin-bottom: 20px;
-    text-align: center;
     padding: 10px 0;
     border-bottom: 1px solid var(--border-color);
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.header-icon {
+    width: 32px;
+    height: 32px;
+    margin-right: 10px;
 }
 
 h1 {
@@ -323,6 +375,29 @@ h1 {
     margin-right: auto;
     float: left;
     clear: both;
+    position: relative;
+}
+
+.bot-message.with-icon {
+    padding-left: 40px;
+}
+
+.bot-message .bot-icon {
+    position: absolute;
+    left: -10px;
+    bottom: -10px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background-color: white;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.bot-message .bot-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .user-message {
@@ -333,6 +408,16 @@ h1 {
     text-align: left;
     float: right;
     clear: both;
+}
+
+.error-message {
+    background-color: #ffcc80; /* Colore arancione per i messaggi di errore */
+    border-bottom-left-radius: 5px;
+    align-self: flex-start;
+    margin-right: auto;
+    float: left;
+    clear: both;
+    position: relative;
 }
 
 /* Stile per l'indicatore di stato e animazione di caricamento */
@@ -349,12 +434,14 @@ h1 {
 
 /* Stile per il messaggio di connessione persa */
 .connection-lost {
-    background-color: rgba(255, 200, 200, 0.8);
-    color: #d32f2f;
+    background-color: rgba(255, 152, 0, 0.2);
+    color: #e65100;
     padding: 8px 16px;
     border-radius: 20px;
     font-weight: bold;
     animation: pulse 1.5s infinite;
+    border-left: 4px solid #ff9800;
+    margin: 10px 0;
 }
 
 @keyframes pulse {

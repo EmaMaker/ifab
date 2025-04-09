@@ -371,7 +371,7 @@ if __name__ == '__main__':
 
     # Lista di pulsanti statici (testo, percorso_immagine)
     button_sx = [
-        ("Zona saldatura", "images/The_Help_Logo.svg.png"),
+        ("Zona saldatura", "web-client/images/The_Help_Logo.svg.png"),
         ("Zona debug", "images/weather.jpg"),
         ("Zona prototipazione", "images/news.jpg"),
     ]
