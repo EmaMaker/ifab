@@ -14,13 +14,12 @@ void odometric_localization(position_t* new_position, position_t* old_position){
 
     new_position->tk = t;
     new_position->theta = old_position->theta + omega*dt_f;
-
-    if (omega <= 1e-4){
+    if (omega <= 1e-4){     //very close to zero -> moving in a straight line
         // fall back to runge kutta/euler
         new_position->x = old_position->x + v*dt_f*cos(old_position->theta);
         new_position->y = old_position->y + v*dt_f*sin(old_position->theta);
     }else{
-        // exact integration
+        // exact integration -> moving in a circle of radius = v/omega
         new_position->x = old_position->x + v/omega * (sin(new_position->theta) - sin(old_position->theta));
         new_position->y = old_position->y - v/omega * (cos(new_position->theta) - cos(old_position->theta));
     }
