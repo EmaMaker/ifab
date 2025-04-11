@@ -18,7 +18,7 @@ void odometric_localization(position_t* new_position, position_t* old_position){
     if (omega <= 1e-4){
         // fall back to runge kutta/euler
         new_position->x = old_position->x + v*dt_f*cos(old_position->theta);
-        new_position->y = old_position->y * v*dt_f*sin(old_position->theta);
+        new_position->y = old_position->y + v*dt_f*sin(old_position->theta);
     }else{
         // exact integration
         new_position->x = old_position->x + v/omega * (sin(new_position->theta) - sin(old_position->theta));
