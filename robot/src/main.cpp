@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include <ArduinoOTA.h>
 #include <WiFi.h>
+#include <WiFiUdp.h>
+#include <ArduinoMDNS.h>
 
 #include "motors.h"
 #include "position_ctrl.h"
@@ -13,16 +15,20 @@ bool wifi_connected = false;
 void setup_ota();
 bool setup_wifi();
 
+WiFiUDP udp;
+MDNS mdns(udp);
+
 void setup() {
   Serial.begin(9600);
   delay(1000);
 
   pinMode(LED_BUILTIN, OUTPUT);
-  // wifi_connected = setup_wifi();
-  // if(wifi_connected){
-  //   digitalWrite(LED_BUILTIN, HIGH);
-  //   setup_ota();
-  // }
+  wifi_connected = setup_wifi();
+  if(wifi_connected){
+    digitalWrite(LED_BUILTIN, HIGH);
+    setup_ota();
+    mdns.begin(WiFi.localIP(), "ifab");
+  }
 
   init_position_ctrl();
   set_desired_position(0.66, 0.33);
@@ -46,7 +52,7 @@ bool setup_wifi(){
     Serial.println("Retrying connection...");
     Serial.print(i&1);
 
-    if(i++ >= 20){
+    if(i++ >= 2){
       digitalWrite(LED_BUILTIN, LOW);
       return false;
     }
@@ -90,5 +96,6 @@ void setup_ota(){
     }
   });
 
+  ArduinoOTA.setHostname("ifab");
   ArduinoOTA.begin();
 }
