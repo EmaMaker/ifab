@@ -193,6 +193,37 @@
     }
 }
 
+/* Pulsante scroll to bottom */
+.scroll-to-bottom {
+    position: fixed;
+    right: 20px;
+    bottom: 90px;
+    background-color: var(--primary-color);
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    transition: background-color 0.3s, transform 0.3s;
+    z-index: 1000;
+}
+
+.scroll-to-bottom:hover {
+    background-color: var(--accent-color);
+    transform: scale(1.1);
+}
+
+.scroll-to-bottom svg {
+    width: 24px;
+    height: 24px;
+    fill: currentColor;
+}
+
 * {
     box-sizing: border-box;
     margin: 0;

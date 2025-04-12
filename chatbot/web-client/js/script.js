@@ -6,6 +6,27 @@ document.addEventListener('DOMContentLoaded', function () {
     const recordButton = document.getElementById('recordButton');
     const statusElement = document.getElementById('status');
 
+    // Crea il pulsante di scroll
+    const scrollButton = document.createElement('button');
+    scrollButton.className = 'scroll-to-bottom';
+    scrollButton.innerHTML = '<svg viewBox="0 0 24 24"><path d="M7.41 15.41L12 20l4.59-4.59L18 16.82l-6 6-6-6 1.41-1.41zM7.41 8.41L12 13l4.59-4.59L18 9.82l-6 6-6-6 1.41-1.41z"/></svg>';
+    document.body.appendChild(scrollButton);
+
+    // Gestisce la visibilità del pulsante di scroll
+    function updateScrollButtonVisibility() {
+        const threshold = 50;
+        const isNotAtBottom = (chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight) > threshold;
+        scrollButton.style.display = isNotAtBottom ? 'flex' : 'none';
+    }
+
+    // Aggiunge l'event listener per il pulsante di scroll
+    scrollButton.addEventListener('click', () => {
+        scrollToBottom();
+    });
+
+    // Aggiunge l'event listener per lo scroll della chat
+    chatContainer.addEventListener('scroll', updateScrollButtonVisibility);
+
     // Funzione per ridimensionare automaticamente la textarea
     function autoResizeTextarea() {
         messageInput.style.height = 'auto';
@@ -111,6 +132,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (wasAtBottom) {
             scrollToBottom();
         }
+        updateScrollButtonVisibility();
     }
 
     // Add a bot message to the chat with Markdown support
@@ -141,6 +163,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (wasAtBottom) {
             scrollToBottom();
         }
+        updateScrollButtonVisibility();
     }
     
     // Funzione dedicata per aggiungere messaggi di errore
@@ -155,6 +178,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (wasAtBottom) {
             scrollToBottom();
         }
+        updateScrollButtonVisibility();
     }
 
     // Add a user audio message to the chat
@@ -240,6 +264,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         messageContainer.appendChild(messageDiv);
         chatContainer.scrollTop = chatContainer.scrollHeight;
+        updateScrollButtonVisibility();
 
         return messageId;
     }
