@@ -18,7 +18,7 @@ from pyLib import AudioPlayer as ap
 
 if __name__ == '__main__':
     # Parse command-line arguments
-    parser = argparse.ArgumentParser(description="Modbus to Piper-TTS")
+    parser = argparse.ArgumentParser(description="Piper-TTS time comparison")
     parser.add_argument("--model", type=str, required=True, help="Path to the Piper-TTS model")
 
     argcomplete.autocomplete(parser)
