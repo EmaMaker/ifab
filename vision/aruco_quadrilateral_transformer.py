@@ -32,7 +32,7 @@ class ArUcoQuadrilateralTransformer(QuadrilateralTransformer):
         self.robot = robot
         self.macchinari = macchinari
         
-    def find_quadrilateral(self, frame):
+    def find_quadrilateral(self, frame, display=True):
         # Convert to grayscale for ArUco detection
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         
@@ -66,8 +66,8 @@ class ArUcoQuadrilateralTransformer(QuadrilateralTransformer):
         if found_markers < 4:
             return None
             
-        # Draw the detected markers on the frame for visualization
-        if ids is not None:
+        # Only draw and display if display flag is True
+        if display and ids is not None:
             cv2.aruco.drawDetectedMarkers(frame, corners, ids)
             
             # Draw the quadrilateral
@@ -75,15 +75,15 @@ class ArUcoQuadrilateralTransformer(QuadrilateralTransformer):
                 pt1 = tuple(quad_corners[i].astype(int))
                 pt2 = tuple(quad_corners[(i + 1) % 4].astype(int))
                 cv2.line(frame, pt1, pt2, (0, 255, 0), 2)
-        
-        # Display the frame with markers
-        cv2.imshow(self.window_name, frame)
+            
+            # Display the frame with markers
+            cv2.imshow(self.window_name, frame)
         
         return quad_corners
     
-    def process_frame(self, frame):
+    def process_frame(self, frame, display=True):
         # Find quadrilateral using ArUco markers
-        corners = self.find_quadrilateral(frame)
+        corners = self.find_quadrilateral(frame, display=display)
         
         # Create a blank frame with output size dimensions
         blank_frame = np.zeros((self.output_size[1], self.output_size[0], 3), dtype=np.uint8)
@@ -195,11 +195,118 @@ class ArUcoQuadrilateralTransformer(QuadrilateralTransformer):
             # Use blank frame when no quadrilateral is found and no previous good corners
             warped = blank_frame
         
-        # Show warped view
-        cv2.imshow(self.warped_window_name, warped)
+        # Show warped view only if display is enabled
+        if display:
+            cv2.imshow(self.warped_window_name, warped)
         
         # Return warped frame
         return warped
+        
+    def process_frame_data(self):
+        """Process a frame and return marker data without displaying UI"""
+        # Capture frame from camera
+        ret, frame = self.cam.read()
+        if not ret:
+            return {}
+            
+        # Find quadrilateral using ArUco markers - but don't display
+        corners = self.find_quadrilateral(frame, display=False)
+        
+        # Convert to grayscale for ArUco detection (for all markers)
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        
+        # Detect all ArUco markers in the frame
+        all_corners, all_ids, rejected = self.detector.detectMarkers(gray)
+        
+        # Update corners if found, otherwise use last good corners
+        if corners is not None:
+            # Update the last good corners when a valid quadrilateral is found
+            self.last_good_corners = corners
+            
+        # If no valid corners available, return empty data
+        if self.last_good_corners is None or all_ids is None:
+            return {}
+            
+        # Get the perspective transform matrix
+        src_pts = self.order_points(self.last_good_corners.astype(np.float32))
+        dst_pts = np.array([
+            [0, 0],
+            [self.output_size[0] - 1, 0],
+            [self.output_size[0] - 1, self.output_size[1] - 1],
+            [0, self.output_size[1] - 1]
+        ], dtype=np.float32)
+        matrix = cv2.getPerspectiveTransform(src_pts, dst_pts)
+        
+        # Process markers
+        result = {
+            'markers': [],
+            'robot': None
+        }
+        
+        # Process all markers
+        for i, marker_id in enumerate(all_ids.flatten()):
+            # Skip corner markers
+            if marker_id in self.marker_ids:
+                continue
+                
+            # Get marker corners
+            marker_corners = all_corners[i][0]
+            
+            # Calculate center of the marker
+            center_x = np.mean(marker_corners[:, 0])
+            center_y = np.mean(marker_corners[:, 1])
+            marker_center = np.array([center_x, center_y, 1.0])
+            
+            # Transform the center point to the warped coordinate system
+            transformed_center = np.matmul(matrix, marker_center)
+            transformed_x = transformed_center[0] / transformed_center[2]
+            transformed_y = transformed_center[1] / transformed_center[2]
+            
+            # Convert pixel coordinates to cm from top-left
+            pos_x_cm = transformed_x * self.scale_x
+            pos_y_cm = transformed_y * self.scale_y
+            
+            # Calculate the orientation angle of the marker
+            v1 = marker_corners[1] - marker_corners[0]  # Vector from top-right to bottom-right
+            angle_rad = np.arctan2(v1[1], v1[0])
+            
+            # Transform two points along the direction vector to see how the angle transforms
+            p1 = np.array([center_x, center_y, 1.0])
+            p2 = np.array([center_x + np.cos(angle_rad) * 20, center_y + np.sin(angle_rad) * 20, 1.0])
+            
+            # Transform both points
+            tp1 = np.matmul(matrix, p1)
+            tp2 = np.matmul(matrix, p2)
+            
+            # Normalize the transformed points
+            tp1 = tp1 / tp1[2]
+            tp2 = tp2 / tp2[2]
+            
+            # Calculate the transformed angle
+            transformed_angle_rad = np.arctan2(tp2[1] - tp1[1], tp2[0] - tp1[0])
+            transformed_angle_deg = np.degrees(transformed_angle_rad)
+            
+            # Create marker data
+            marker_data = {
+                'id': int(marker_id),
+                'position': [float(pos_x_cm), float(pos_y_cm)],
+                'position_px': [float(transformed_x), float(transformed_y)],
+                'angle': float(transformed_angle_deg)
+            }
+            
+            # Check if this is the robot marker
+            if marker_id == self.robot:
+                result['robot'] = marker_data
+            else:
+                result['markers'].append(marker_data)
+                
+        return result
+        
+    def release(self):
+        """Release camera and close all windows"""
+        if self.cam is not None and self.cam.isOpened():
+            self.cam.release()
+        cv2.destroyAllWindows()
     
     def get_robot(self, frame=None):
         # If no frame is provided, use the current frame from the camera
