@@ -1,11 +1,12 @@
 import cv2
 import numpy as np
+import json
 from quadrilateral_transformer import QuadrilateralTransformer
 
 class ArUcoQuadrilateralTransformer(QuadrilateralTransformer):
     def __init__(self, camera_index=0, aruco_dict_type=cv2.aruco.DICT_6X6_250, 
                  marker_ids=[10, 12, 14, 16], min_area=1000, output_size=(800, 600),
-                 width_cm=30, height_cm=30):
+                 width_cm=30, height_cm=30, robot=18):
         # Initialize parent class with default parameters
         super().__init__(camera_index, min_area=min_area, output_size=output_size)
         
@@ -27,6 +28,8 @@ class ArUcoQuadrilateralTransformer(QuadrilateralTransformer):
         # Scale factors to convert from pixels to cm
         self.scale_x = width_cm / output_size[0]
         self.scale_y = height_cm / output_size[1]
+
+        self.robot = robot
         
     def find_quadrilateral(self, frame):
         # Convert to grayscale for ArUco detection
@@ -186,10 +189,7 @@ class ArUcoQuadrilateralTransformer(QuadrilateralTransformer):
                                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
                 
                 # Print the internal markers information to console
-                if internal_markers:
-                    print("\nInternal markers detected:")
-                    for marker in internal_markers:
-                        print(f"Marker ID: {marker['id']}, Position: ({marker['position'][0]:.1f}cm, {marker['position'][1]:.1f}cm), Angle: {marker['angle']:.1f}°")
+                print(self.get_robot())
         else:
             # Use blank frame when no quadrilateral is found and no previous good corners
             warped = blank_frame
@@ -199,6 +199,84 @@ class ArUcoQuadrilateralTransformer(QuadrilateralTransformer):
         
         # Return warped frame
         return warped
+    
+    def get_robot(self, frame=None):
+        # If no frame is provided, use the current frame from the camera
+        if frame is None:
+            ret, frame = self.cam.read()
+            if not ret:
+                return None
+        
+        # Convert to grayscale for ArUco detection
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        
+        # Detect all ArUco markers in the frame
+        all_corners, all_ids, rejected = self.detector.detectMarkers(gray)
+        
+        # If no markers detected or no valid quadrilateral, return None
+        if all_ids is None or self.last_good_corners is None:
+            return None
+        
+        # Get the perspective transform matrix
+        src_pts = self.order_points(self.last_good_corners.astype(np.float32))
+        dst_pts = np.array([
+            [0, 0],
+            [self.output_size[0] - 1, 0],
+            [self.output_size[0] - 1, self.output_size[1] - 1],
+            [0, self.output_size[1] - 1]
+        ], dtype=np.float32)
+        matrix = cv2.getPerspectiveTransform(src_pts, dst_pts)
+        
+        # Look for the robot marker
+        robot_data = None
+        for i, marker_id in enumerate(all_ids.flatten()):
+            if marker_id == self.robot:
+                # This is the robot marker
+                marker_corners = all_corners[i][0]
+                
+                # Calculate center of the marker
+                center_x = np.mean(marker_corners[:, 0])
+                center_y = np.mean(marker_corners[:, 1])
+                marker_center = np.array([center_x, center_y, 1.0])
+                
+                # Transform the center point to the warped coordinate system
+                transformed_center = np.matmul(matrix, marker_center)
+                transformed_x = transformed_center[0] / transformed_center[2]
+                transformed_y = transformed_center[1] / transformed_center[2]
+                
+                # Convert pixel coordinates to cm from top-left
+                pos_x_cm = transformed_x * self.scale_x
+                pos_y_cm = transformed_y * self.scale_y
+                
+                # Calculate the orientation angle of the marker
+                v1 = marker_corners[1] - marker_corners[0]  # Vector from top-right to bottom-right
+                angle_rad = np.arctan2(v1[1], v1[0])
+                
+                # Transform two points along the direction vector to see how the angle transforms
+                p1 = np.array([center_x, center_y, 1.0])
+                p2 = np.array([center_x + np.cos(angle_rad) * 20, center_y + np.sin(angle_rad) * 20, 1.0])
+                
+                # Transform both points
+                tp1 = np.matmul(matrix, p1)
+                tp2 = np.matmul(matrix, p2)
+                
+                # Normalize the transformed points
+                tp1 = tp1 / tp1[2]
+                tp2 = tp2 / tp2[2]
+                
+                # Calculate the transformed angle
+                transformed_angle_rad = np.arctan2(tp2[1] - tp1[1], tp2[0] - tp1[0])
+                transformed_angle_deg = np.degrees(transformed_angle_rad)
+                
+                # Create the robot data dictionary
+                robot_data = {
+                    "x": float(pos_x_cm),
+                    "y": float(pos_y_cm),
+                    "angle": float(transformed_angle_deg)
+                }
+                break
+        
+        return robot_data
     
     def run(self):
         # Override parent's run method to avoid showing the edge detection window
@@ -217,11 +295,9 @@ class ArUcoQuadrilateralTransformer(QuadrilateralTransformer):
 
 # Example usage
 if __name__ == '__main__':
-    # Create transformer with default marker IDs [10, 12, 14, 16]
-    # These correspond to the markers that should be placed at:
-    # - top-left: marker 10
-    # - top-right: marker 12
-    # - bottom-right: marker 14
-    # - bottom-left: marker 16
-    transformer = ArUcoQuadrilateralTransformer(camera_index=0)
-    transformer.run()
+    with open('vision/config.json') as f:
+        d = json.load(f)
+        marker_ids = [d['table']['aruco']['top-left'], d['table']['aruco']['top-right'], d['table']['aruco']['bottom-right'], d['table']['aruco']['bottom-left']]
+        robot = d['robot']
+        transformer = ArUcoQuadrilateralTransformer(camera_index=0, marker_ids=marker_ids, robot=robot)
+        transformer.run()
