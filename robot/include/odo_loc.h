@@ -2,8 +2,8 @@
 #define ODO_LOC_H
 
 
-constexpr double ODO_DISTANCE_BETWEEN_WHEELS_MM = 0.245;
-constexpr double ODO_WHEEL_RADIUS_MM = 0.055;
+constexpr double ODO_DISTANCE_BETWEEN_WHEELS = 0.2;
+constexpr double ODO_WHEEL_RADIUS = 0.071;
 
 typedef struct{
     double x{0};

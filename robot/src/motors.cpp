@@ -4,8 +4,8 @@
 #include "wheels.h"
 
 int mot_pins[][3] = {
-    {PIN_MOTL_A, PIN_MOTL_B, PIN_MOTL_PWM},
-    {PIN_MOTR_A, PIN_MOTR_B, PIN_MOTR_PWM}
+    {PIN_MOTR_A, PIN_MOTR_B, PIN_MOTR_PWM},
+    {PIN_MOTL_A, PIN_MOTL_B, PIN_MOTL_PWM}
 };
 // account for motor PWM deadzone
 // might as well hardcode them, maybe better as parameter in .h?

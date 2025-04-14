@@ -17,8 +17,10 @@ from pyLib.util import *
 Flask WebSocket server per la comunicazione con il bot 
 @param url:                 URL del bot
 @param auth:                Token di autenticazione per il bot
-@param button_list_dx/sx:   Lista di tuple contenenti il testo e il percorso dell'immagine per i pulsanti statici
-                            [(text, image_path), ...]
+@param jobStation_list_top: Lista di dizionari contenenti il testo, il percorso dell'immagine per i pulsanti statici e la key del pulsante
+                                [{text:"...", image_path:"...", say:"...", key:"..."}, ...]
+@param machine_list_bot:    Lista di dizionari contenenti il testo, il percorso dell'immagine per i pulsanti statici e la key del pulsante
+                                [{text:"...", image_path:"...", say:"...", key:"..."}, ...]
 @param sttFun:              Funzione di callback per la trascrizione audio (opzionale)
                             @param sttFun(pathToAudio) -> Transcription | None
 @param ttsFun:              Funzione di callback per la sintesi vocale (opzionale)
@@ -26,9 +28,12 @@ Flask WebSocket server per la comunicazione con il bot
 """
 
 
-def create_app(url: str, auth: str, jobStation_list_top: tuple[str, str], machine_list_bot: tuple[str, str],
+def create_app(url: str, auth: str,
+               jobStation_list_top: list[dict[str, str, str, str]],
+               machine_list_bot: list[dict[str, str, str, str]],
                sttFun: Callable[[str], str | None] = None,
-               ttsFun: Callable[[str], None] = None) -> tuple[
+               ttsFun: Callable[[str], None] = None,
+               goBotFun: Callable[[str], None] = None) -> tuple[
     Flask, SocketIO, IfabChatWebSocket]:
     """Crea e restituisce l'istanza dell'app Flask, socketio e client WebSocket, con tutti i callback"""
 
@@ -76,8 +81,7 @@ def create_app(url: str, auth: str, jobStation_list_top: tuple[str, str], machin
     socketio = SocketIO(app, cors_allowed_origins="*")  # Inizializza SocketIO con CORS abilitato tra il backend python ed il frontend Flask
 
     # Configurazione delle callback esterne
-    stt_funx = sttFun if sttFun else stt_mock  # Se non viene fornita una funzione STT, usa la funzione di mock
-    # TODO: Callback a piper per gestire la creazione degli audio
+    stt_fun = sttFun if sttFun else stt_mock  # Se non viene fornita una funzione STT, usa la funzione di mock
 
     # Registra i callback per gestire l'inoltro dei messaggi dal bot al frontend
     chat_client.add_message_callback(backEnd_msg2UI)
@@ -94,18 +98,14 @@ def create_app(url: str, auth: str, jobStation_list_top: tuple[str, str], machin
     def handle_connect():
         """Gestisce l'evento di connessione di un client Socket.IO"""
         messageBox("Nuova connessione frontend", "Avvio nuova conversazione con il bot", StyleBox.Dash_Bold)
-
         # Invia un messaggio di benvenuto all'utente
         backEnd_msg2UI('Benvenuto! Puoi scrivere un messaggio o registrare un messaggio vocale.', audio_enable=False)
-
         # Gestione più robusta della connessione
         try:
             if chat_client.running:
                 messageBox("Chiusura conversazione", "Chiudo la conversazione precedente con il bot", StyleBox.Light)
                 chat_client.stop_conversation()
-                # Breve pausa per assicurarsi che la connessione precedente sia completamente chiusa
-                time.sleep(0.5)
-
+                time.sleep(0.5)  # Breve pausa per assicurarsi che la connessione precedente sia completamente chiusa
             # Tenta di avviare una nuova conversazione
             if not chat_client.start_conversation():
                 messageBox("Errore connessione", "Impossibile avviare la conversazione con il bot", StyleBox.Error)
@@ -144,41 +144,33 @@ def create_app(url: str, auth: str, jobStation_list_top: tuple[str, str], machin
     def index():
         """Serve the main HTML page"""
 
-        # Verifica l'esistenza dei file immagine
-        def verify_buttons(button_list):
-            verified_buttons = []
-            for text, img_path in button_list:
-                # Se l'immagine esiste, usa il percorso, altrimenti imposta a None
-                full_path = os.path.join(os.path.dirname(__file__), img_path)
-                if os.path.exists(full_path):
-                    verified_buttons.append((text, img_path))
+        def mkHTMLbutton(buttons):
+            html = ''
+            for item in buttons:
+                if "img_path" not in item or "text" not in item or "say" not in item or "key" not in item:
+                    print(f"[WARNING] 'img_path' or 'text' or 'say' or 'key' not in item: {item}")
+                    continue
+                text = item["text"]
+                img_path = item["img_path"]
+                say = item["say"]
+                key = item["key"]
+                if os.path.exists(os.path.join(os.path.dirname(__file__), img_path)):  # Se l'immagine esiste, impostala come sfondo
+                    if not img_path.startswith('/'):  # Assicurati che il percorso dell'immagine inizi con '/'
+                        img_path = '/' + img_path
+                    bg_img = f'style="background-image: url(\'{img_path}\')"'
                 else:
-                    verified_buttons.append((text, None))
-            return verified_buttons
-
-        machine_buttons = verify_buttons(machine_list_bot)
-        job_station_buttons = verify_buttons(jobStation_list_top)
+                    bg_img = ''
+                html += f'<button class="static-btn" data-say="{say}" data-key="{key}" {bg_img}><span>{text}</span></button>\n'
+            return html
 
         # Crea HTML per i pulsanti di sinistra
         # Leggi il contenuto del file HTML
         with open(os.path.join(os.path.dirname(__file__), 'web-client/index.html'), 'r') as file:
             html_content = file.read()
 
-        def mkHTMLbutton(buttons):
-            html = ''
-            for text, img_path in buttons:
-                if img_path:
-                    # Assicurati che il percorso dell'immagine inizi con '/'
-                    if not img_path.startswith('/'):
-                        img_path = '/' + img_path
-                    html += f'<button class="static-btn" style="background-image: url(\'{img_path}\')">' + '<span>' + f'{text}' + '</span>' + '</button>\n'
-                else:
-                    html += f'<button class="static-btn"><span>{text}</span></button>\n'
-            return html
-
         # Sostituisci i placeholder nel template
-        html_content = html_content.replace('<!-- STATIC_BUTTONS_JOB_STATION -->', mkHTMLbutton(job_station_buttons))
-        html_content = html_content.replace('<!-- STATIC_BUTTONS_MACHINE -->', mkHTMLbutton(machine_buttons))
+        html_content = html_content.replace('<!-- STATIC_BUTTONS_JOB_STATION -->', mkHTMLbutton(jobStation_list_top))
+        html_content = html_content.replace('<!-- STATIC_BUTTONS_MACHINE -->', mkHTMLbutton(machine_list_bot))
 
         return html_content
 
@@ -219,38 +211,19 @@ def create_app(url: str, auth: str, jobStation_list_top: tuple[str, str], machin
     def button_click():
         """Handle button click events without sending to chatbot"""
         data = request.json
-        if not data or 'text' not in data:
-            return jsonify({'success': False, 'error': 'No text provided'}), 400
+        if not data or 'key' not in data or 'say' not in data:
+            return jsonify({'success': False, 'error': 'No "key" or "say" provided'}), 400
 
-        button_text = data['text']
-
-        # Verifica se il testo corrisponde a uno dei pulsanti statici
-        is_valid_button = False
-        for text, _ in jobStation_list_top + machine_list_bot:
-            if button_text.strip() == text.strip():
-                is_valid_button = True
-                break
-
-        if not is_valid_button:
-            return jsonify({'success': False, 'error': 'Invalid button text'}), 400
+        key = data['key']
+        say = data['say']
 
         # Stampa il testo del pulsante nel server per debug
-        messageBox("Frontend comando", button_text, StyleBox.Light)
-        # TODO: Gestione del comando da inviare alla camera in base al bottone
-        # TODO: magari aggiungere una callback esterna
-        # Qui puoi aggiungere la logica per gestire il comando
-        # Invece di inviare il messaggio al chatbot, registra solo il comando
-        # che verrà poi utilizzato per chiamare altre funzioni
-
-        # Esempio di come potresti gestire diversi comandi:
-        # if button_text == "Aiuto":
-        #     # Chiama una funzione specifica per l'aiuto
-        #     pass
-        # elif button_text == "Informazioni":
-        #     # Chiama una funzione specifica per le informazioni
-        #     pass
-
-        return jsonify({'success': True, 'command': button_text})
+        messageBox("Frontend al click di un pulsante invia chiave", f"key: {key}\nsay: {say}", StyleBox.Light)
+        if goBotFun:
+            goBotFun(key)  # Invia il nuovo target al robot
+        if ttsFun:
+            ttsFun(say)  # Invia il messaggio al TTS
+        return jsonify({'success': True, 'key': key})
 
     # Aggiungi una route per gestire l'invio di un messaggio audio
     @app.route('/upload-audio', methods=['POST'])
@@ -289,11 +262,11 @@ def create_app(url: str, auth: str, jobStation_list_top: tuple[str, str], machin
 
             # Invia il messaggio audio al bot in un thread separato per non bloccare la risposta HTTP
             def send_audio_thread(audio_path, message_id):
-                stt_audio_text = stt_funx(audio_path=audio_path)
+                stt_audio_text = stt_fun(audio_path=audio_path)
                 if stt_audio_text:
                     messageBox("Backend audio STT", f"Trascrizione audio: {stt_audio_text}", StyleBox.Light)
                     backEnd_msg2UI(stt_audio_text, message_id=message_id)  # Invia messaggio trascritto al frontend
-                    if stt_funx is not stt_mock:  # Invia messaggio trascritto al bot solo se veramente trascritto
+                    if stt_fun is not stt_mock:  # Invia messaggio trascritto al bot solo se veramente trascritto
                         messageBox("Backend audio STT to Bot", "Trascrizione audio inviata al bot", StyleBox.Light)
                         chat_client.send_message(stt_audio_text)
                     else:
@@ -377,15 +350,15 @@ if __name__ == '__main__':
 
     # Lista di pulsanti statici (testo, percorso_immagine)
     zone_lavoro = [
-        ("Zona saldatura", "web-client/images/The_Help_Logo.svg.png"),
-        ("Zona debug", "web-client/images/weather.jpg"),
-        ("Zona prototipazione", "images/news.jpg"),
+        {"text": "Zona saldatura", "img_path": "web-client/images/help.jpeg", "say": "Vado a saldare", "key": "saldatura"},
+        {"text": "Zona debug", "img_path": "web-client/images/weather.jpg", "say": "Mi dirigo alla strumentazione di analisi", "key": "debug"},
+        {"text": "Zona prototipazione", "img_path": "images/news.jpg", "say": "Vado sul tavolo di prototipazione", "key": "prototipazione"}
     ]
     macchinari = [
-        ("Tagliatrice Laser", "web-client/images/info.jpg"),
-        ("Stampante 3D", "web-client/images/commands.jpg"),
-        ("CNC", "web-client/images/music.jpg"),
-        ("Stampante Plotter", "web-client/images/info.jpg"),
+        {"text": "Tagliatrice Laser", "img_path": "web-client/images/info.jpg", "say": "Vado dalla Tagliatrice Laser", "key": "laser"},
+        {"text": "Stampante 3D", "img_path": "web-client/images/commands.jpg", "say": "Vado verso la Stampante 3D", "key": "3d"},
+        {"text": "CNC", "img_path": "web-client/images/music.jpg", "say": "Mi dirigo verso la CNC", "key": "cnc"},
+        {"text": "Plotter", "img_path": "web-client/images/info.jpg", "say": "Sto andando dal Plotter", "key": "plotter"}
     ]
     app, socketio, chat_client = create_app(url, auth, zone_lavoro, macchinari, ttsFun=player.play_text)  # Crea l'app Flask e SocketIO
 

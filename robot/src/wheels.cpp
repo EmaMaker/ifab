@@ -32,8 +32,8 @@ float spd_sx{0}, spd_dx{0};
 float output_sx{0}, setpoint_sx{0}; //setpoint in substep/s for now
 float output_dx{0}, setpoint_dx{0};
 
-QuickPID ctrl_sx(&spd_sx, &output_sx, &setpoint_sx, WHEELS_KP, WHEELS_KI, 0, ctrl_sx.pMode::pOnError, ctrl_sx.dMode::dOnMeas, ctrl_sx.iAwMode::iAwCondition, ctrl_sx.Action::reverse);
-QuickPID ctrl_dx(&spd_dx, &output_dx, &setpoint_dx, WHEELS_KP, WHEELS_KI, 0, ctrl_dx.pMode::pOnError, ctrl_dx.dMode::dOnMeas, ctrl_dx.iAwMode::iAwCondition, ctrl_dx.Action::reverse);
+QuickPID ctrl_sx(&spd_sx, &output_sx, &setpoint_sx, WHEELS_KP, WHEELS_KI, 0, ctrl_sx.pMode::pOnError, ctrl_sx.dMode::dOnMeas, ctrl_sx.iAwMode::iAwCondition, ctrl_sx.Action::direct);
+QuickPID ctrl_dx(&spd_dx, &output_dx, &setpoint_dx, WHEELS_KP, WHEELS_KI, 0, ctrl_dx.pMode::pOnError, ctrl_dx.dMode::dOnMeas, ctrl_dx.iAwMode::iAwCondition, ctrl_dx.Action::direct);
 
 void init_wheels(){
     init_motors();
@@ -61,12 +61,6 @@ void update_wheels(){
     if(ctrl_sx.Compute()) drive_motor_volt(MOT_L, output_sx);
     if(ctrl_dx.Compute()) drive_motor_volt(MOT_R, output_dx);
 } 
-
-void setup_encoders(){
-  //enc_sx.begin(12);
-  enc_dx.begin(14);
-}
-
 
 void update_encoders(){
   enc_sx.update();

@@ -10,6 +10,7 @@
     --recording-color: #ff4d4d;
     --volume-indicator-color: rgba(255, 77, 77, 0.3);
     --error-message-bg: #ffebcc; /* Colore arancione chiaro per i messaggi di errore */
+    --error-message-gui-bg: #fff2c7; /* Colore giallo chiaro per i messaggi di errore del frontend*/
 }
 
 .volume-indicator {
@@ -122,6 +123,13 @@
     word-break: break-word;
 }
 
+.error-message-gui {
+    background-color: var(--error-message-gui-bg) !important;
+    border-left: 4px solid #ecd27c; /* Bordo arancione per evidenziare l'errore */
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
 .bot-message ul, .bot-message ol {
     padding-left: 20px;
     margin: 2px 0 0;
@@ -195,22 +203,24 @@
 
 /* Pulsante scroll to bottom */
 .scroll-to-bottom {
-    position: fixed;
-    right: 20px;
-    bottom: 90px;
+    position: absolute;
+    right: 10px;
+    top: -60px; /* Posizionato in alto sopra i messaggi */
     background-color: var(--primary-color);
     color: white;
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    display: none;
+    display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     border: none;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-    transition: background-color 0.3s, transform 0.3s;
+    transition: background-color 0.3s, transform 0.3s, opacity 0.3s;
     z-index: 1000;
+    opacity: 0;
+    margin-top: 10px; /* Aggiunto margine superiore per migliorare la visibilità */
 }
 
 .scroll-to-bottom:hover {
@@ -222,6 +232,11 @@
     width: 24px;
     height: 24px;
     fill: currentColor;
+    display: block;
+    margin: 0 auto;
+    position: relative;
+    top: 21%;
+    transform: translateY(-50%);
 }
 
 * {

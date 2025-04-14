@@ -1,0 +1,12 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/ingydotnet/git-subrepo#readme
+;
+[subrepo]
+	remote = ../ifab_/robot/iFab-robot
+	branch = master
+	commit = ecbafa75705d1245a0c74ca53e17f4e792620e88
+	parent = f22fb9b45ecb54486617a37e51b77cb5ac6ec308
+	method = merge
+	cmdver = 0.4.9

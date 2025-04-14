@@ -13,8 +13,8 @@ unsigned long timer_position = 0;
 float pos_x{0}, output_x{0}, setpoint_x{0};
 float pos_y{0}, output_y{0}, setpoint_y{0};
 
-QuickPID ctrl_x(&pos_x, &output_x, &setpoint_x, KP_X, KI_X, KD_X, ctrl_x.pMode::pOnError, ctrl_x.dMode::dOnMeas, ctrl_x.iAwMode::iAwCondition, ctrl_x.Action::reverse);
-QuickPID ctrl_y(&pos_y, &output_y, &setpoint_y, KP_Y, KI_Y, KD_Y, ctrl_y.pMode::pOnError, ctrl_y.dMode::dOnMeas, ctrl_y.iAwMode::iAwCondition, ctrl_y.Action::reverse);
+QuickPID ctrl_x(&pos_x, &output_x, &setpoint_x, KP_X, KI_X, KD_X, ctrl_x.pMode::pOnError, ctrl_x.dMode::dOnMeas, ctrl_x.iAwMode::iAwCondition, ctrl_x.Action::direct);
+QuickPID ctrl_y(&pos_y, &output_y, &setpoint_y, KP_Y, KI_Y, KD_Y, ctrl_y.pMode::pOnError, ctrl_y.dMode::dOnMeas, ctrl_y.iAwMode::iAwCondition, ctrl_y.Action::direct);
 
 void init_position_ctrl(void){
     init_wheels();
@@ -22,8 +22,9 @@ void init_position_ctrl(void){
     ctrl_x.SetSampleTimeUs(sample_time_position_micros);
     ctrl_y.SetSampleTimeUs(sample_time_position_micros);
 
-    ctrl_x.SetOutputLimits(-25*ODO_WHEEL_RADIUS_MM, 25*ODO_WHEEL_RADIUS_MM);
-    ctrl_y.SetOutputLimits(-25*ODO_WHEEL_RADIUS_MM, 25*ODO_WHEEL_RADIUS_MM);
+    // motors are rated at about 200RPM -> 20 rad/s
+    ctrl_x.SetOutputLimits(-25*ODO_WHEEL_RADIUS, 25*ODO_WHEEL_RADIUS);
+    ctrl_y.SetOutputLimits(-25*ODO_WHEEL_RADIUS, 25*ODO_WHEEL_RADIUS);
 
     ctrl_x.SetMode(ctrl_x.Control::automatic);
     ctrl_y.SetMode(ctrl_y.Control::automatic);
@@ -50,14 +51,32 @@ void update_position_ctrl(void){
     ctrl_x.Compute();
     ctrl_y.Compute();
 
-    float wt_11 = 2*cos(position.theta) + ODO_DISTANCE_BETWEEN_WHEELS_MM*sin(position.theta);
-    float wt_12 = -B_FROM_CENTER*(2*sin(position.theta) - ODO_DISTANCE_BETWEEN_WHEELS_MM*cos(position.theta));
-    float wt_21 = 2*cos(position.theta) - ODO_DISTANCE_BETWEEN_WHEELS_MM*sin(position.theta);
-    float wt_22 = -B_FROM_CENTER*(2*sin(position.theta) + ODO_DISTANCE_BETWEEN_WHEELS_MM*cos(position.theta));
+    constexpr double d = ODO_DISTANCE_BETWEEN_WHEELS;
+    constexpr double r = ODO_WHEEL_RADIUS;
+    constexpr double b = B_FROM_CENTER;
+    constexpr double det = 2*b*r;
 
-    // motors go in the reverse direction
-    set_right_wheel_angspd(- wt_11 * output_x - wt_12*output_y);
-    set_left_wheel_angspd(- wt_21 * output_x - wt_22*output_y);
+    double t_11 = cos(position.theta);
+    double t_12 = sin(position.theta);
+    double t_21 = -sin(position.theta)/b;
+    double t_22 = cos(position.theta)/b;
+
+    double v = t_11 * output_x + t_12*output_y;
+    double w = t_21 * output_x + t_22*output_y;
+    
+    v = constrain(v, -0.35, 0.35);
+    w = constrain(w, -0.6, 0.6);
+
+    double w_11 = 1/r;
+    double w_12 = d/(2*r);
+    double w_21 = 1/r;
+    double w_22 = -d/(2*r);
+
+    double wr = w_11*v + w_12*w;
+    double wl = w_21*v + w_22*w;
+
+    set_right_wheel_angspd(wr);
+    set_left_wheel_angspd(wl);
 
     timer_position = t;
 
