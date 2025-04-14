@@ -17,8 +17,8 @@ from pyLib.util import *
 Flask WebSocket server per la comunicazione con il bot 
 @param url:                 URL del bot
 @param auth:                Token di autenticazione per il bot
-@param button_list_dx/sx:   Lista di tuple contenenti il testo e il percorso dell'immagine per i pulsanti statici
-                            [(text, image_path), ...]
+@param button_list_dx/sx:   Lista di dizionari contenenti il testo, il percorso dell'immagine per i pulsanti statici e la key del pulsante
+                            [{text:"...", image_path:"...", say:"...", key:"..."}, ...]
 @param sttFun:              Funzione di callback per la trascrizione audio (opzionale)
                             @param sttFun(pathToAudio) -> Transcription | None
 @param ttsFun:              Funzione di callback per la sintesi vocale (opzionale)
@@ -26,9 +26,12 @@ Flask WebSocket server per la comunicazione con il bot
 """
 
 
-def create_app(url: str, auth: str, jobStation_list_top: tuple[str, str], machine_list_bot: tuple[str, str],
+def create_app(url: str, auth: str,
+               jobStation_list_top: list[dict[str, str, str, str]],
+               machine_list_bot: list[dict[str, str, str, str]],
                sttFun: Callable[[str], str | None] = None,
-               ttsFun: Callable[[str], None] = None) -> tuple[
+               ttsFun: Callable[[str], None] = None,
+               goBotFun: Callable[[str], None] = None) -> tuple[
     Flask, SocketIO, IfabChatWebSocket]:
     """Crea e restituisce l'istanza dell'app Flask, socketio e client WebSocket, con tutti i callback"""
 
@@ -147,7 +150,12 @@ def create_app(url: str, auth: str, jobStation_list_top: tuple[str, str], machin
         # Verifica l'esistenza dei file immagine
         def verify_buttons(button_list):
             verified_buttons = []
-            for text, img_path in button_list:
+            for item in button_list:
+                if "text" not in item or "img_path" not in item:
+                    print(f"[WARNING] 'text' or 'img_path' not in item: {item}")
+                    continue
+                text=item["text"]
+                img_path=item["img_path"]
                 # Se l'immagine esiste, usa il percorso, altrimenti imposta a None
                 full_path = os.path.join(os.path.dirname(__file__), img_path)
                 if os.path.exists(full_path):
@@ -226,7 +234,11 @@ def create_app(url: str, auth: str, jobStation_list_top: tuple[str, str], machin
 
         # Verifica se il testo corrisponde a uno dei pulsanti statici
         is_valid_button = False
-        for text, _ in jobStation_list_top + machine_list_bot:
+        for item in (jobStation_list_top + machine_list_bot):
+            if "text" not in item:
+                print(f"[WARNING] 'text' not in item: {item}")
+                continue
+            text = item["text"]
             if button_text.strip() == text.strip():
                 is_valid_button = True
                 break
@@ -236,20 +248,8 @@ def create_app(url: str, auth: str, jobStation_list_top: tuple[str, str], machin
 
         # Stampa il testo del pulsante nel server per debug
         messageBox("Frontend comando", button_text, StyleBox.Light)
-        # TODO: Gestione del comando da inviare alla camera in base al bottone
-        # TODO: magari aggiungere una callback esterna
-        # Qui puoi aggiungere la logica per gestire il comando
-        # Invece di inviare il messaggio al chatbot, registra solo il comando
-        # che verrà poi utilizzato per chiamare altre funzioni
-
-        # Esempio di come potresti gestire diversi comandi:
-        # if button_text == "Aiuto":
-        #     # Chiama una funzione specifica per l'aiuto
-        #     pass
-        # elif button_text == "Informazioni":
-        #     # Chiama una funzione specifica per le informazioni
-        #     pass
-
+        if goBotFun:
+            goBotFun(button_text)
         return jsonify({'success': True, 'command': button_text})
 
     # Aggiungi una route per gestire l'invio di un messaggio audio
@@ -377,15 +377,15 @@ if __name__ == '__main__':
 
     # Lista di pulsanti statici (testo, percorso_immagine)
     zone_lavoro = [
-        ("Zona saldatura", "web-client/images/The_Help_Logo.svg.png"),
-        ("Zona debug", "web-client/images/weather.jpg"),
-        ("Zona prototipazione", "images/news.jpg"),
+        {"text": "Zona saldatura", "image_path": "web-client/images/The_Help_Logo.svg.png", "say": "Zona saldatura", "key": "saldatura"},
+        {"text": "Zona debug", "image_path": "web-client/images/weather.jpg", "say": "Zona debug", "key": "debug"},
+        {"text": "Zona prototipazione", "image_path": "images/news.jpg", "say": "Zona prototipazione", "key": "prototipazione"}
     ]
     macchinari = [
-        ("Tagliatrice Laser", "web-client/images/info.jpg"),
-        ("Stampante 3D", "web-client/images/commands.jpg"),
-        ("CNC", "web-client/images/music.jpg"),
-        ("Stampante Plotter", "web-client/images/info.jpg"),
+        {"text": "Tagliatrice Laser", "image_path": "web-client/images/info.jpg", "say": "Tagliatrice Laser", "key": "laser"},
+        {"text": "Stampante 3D", "image_path": "web-client/images/commands.jpg", "say": "Stampante 3D", "key": "3d"},
+        {"text": "CNC", "image_path": "web-client/images/music.jpg", "say": "CNC", "key": "cnc"},
+        {"text": "Stampante Plotter", "image_path": "web-client/images/info.jpg", "say": "Stampante Plotter", "key": "plotter"}
     ]
     app, socketio, chat_client = create_app(url, auth, zone_lavoro, macchinari, ttsFun=player.play_text)  # Crea l'app Flask e SocketIO
 
