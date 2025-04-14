@@ -216,6 +216,7 @@ class IfabChatWebSocket:
             callback(error_msg)
         return False
 
+    # TODO: aggiungere tipo una callback al sistema della telecamera, per avere lo stato corrente del robot
     def send_message(self, text):
         """Send a message to the bot using REST API with retry mechanism"""
         if not self.conversation_id:
