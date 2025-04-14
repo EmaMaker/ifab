@@ -3,6 +3,7 @@
 #include <WiFi.h>
 #include <WiFiUdp.h>
 #include <ArduinoMDNS.h>
+#include <ArduinoJson.h>
 
 #include "motors.h"
 #include "position_ctrl.h"
@@ -42,6 +43,7 @@ void loop() {
   ArduinoOTA.handle();
   wifi_receive(); 
   update_position_ctrl();
+  set
 }
 
 
@@ -55,8 +57,35 @@ void wifi_receive(){
     int len = udp.read(packetBuffer, 255);
     if(len > 0) packetBuffer[len] = '\0';
     Serial.println(packetBuffer);
+
+    //JSON parsing
+
+    JsonDocument doc;       // Create a JSON document
+
+    DeserializationError error = deserializeJson(doc, json);
+
+    if (error) {
+      Serial.print(F("deserializeJson() failed: "));
+      Serial.println(error.c_str());
+      return;
+    }
+
+    // Extract the JSON objects
+
+    float setpoint_x = doc["setpoint"][0];
+    float setpoint_y = doc["setpoint"][1];
+    float setpoint_theta = doc["setpoint"][2];
+
+    float target_x = doc["target"][0];
+    float target_y = doc["target"][1];
+    float target_theta = doc["target"][2];
+
+    float target2_x = doc["target2"][0];
+    float target2_y = doc["target2"][1];
+    float target2_theta = doc["target2"][2];
+
+
   }
-  
 }
 
 bool setup_wifi(){
