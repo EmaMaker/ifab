@@ -6,6 +6,8 @@ robot/.vscode/ipch
 
 package-lock.json
 
+envEnelSetup.sh
+
 **/__pycache__/
 **/node_modules/
 **/bower_components/

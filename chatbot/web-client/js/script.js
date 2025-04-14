@@ -6,17 +6,21 @@ document.addEventListener('DOMContentLoaded', function () {
     const recordButton = document.getElementById('recordButton');
     const statusElement = document.getElementById('status');
 
-    // Crea il pulsante di scroll
-    const scrollButton = document.createElement('button');
-    scrollButton.className = 'scroll-to-bottom';
-    scrollButton.innerHTML = '<svg viewBox="0 0 24 24"><path d="M7.41 15.41L12 20l4.59-4.59L18 16.82l-6 6-6-6 1.41-1.41zM7.41 8.41L12 13l4.59-4.59L18 9.82l-6 6-6-6 1.41-1.41z"/></svg>';
-    document.body.appendChild(scrollButton);
+    // Ottieni il riferimento al pulsante di scroll già presente nell'HTML
+    const scrollButton = document.getElementById('scrollButton');
+    
+    // Imposta la visibilità iniziale del pulsante
+    updateScrollButtonVisibility();
 
     // Gestisce la visibilità del pulsante di scroll
     function updateScrollButtonVisibility() {
         const threshold = 50;
-        const isNotAtBottom = (chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight) > threshold;
-        scrollButton.style.display = isNotAtBottom ? 'flex' : 'none';
+        const isNotAtBottom = (messageContainer.scrollHeight - messageContainer.scrollTop - messageContainer.clientHeight) > threshold;
+        // Usa solo l'opacità per mostrare/nascondere il pulsante, mantenendolo sempre nel DOM
+        scrollButton.style.opacity = isNotAtBottom ? '1' : '0';
+        // Disabilita anche gli eventi del mouse quando è nascosto
+        scrollButton.style.pointerEvents = isNotAtBottom ? 'auto' : 'none';
+        console.log('Scroll position:', messageContainer.scrollTop, 'ScrollHeight:', messageContainer.scrollHeight, 'ClientHeight:', messageContainer.clientHeight, 'Difference:', messageContainer.scrollHeight - messageContainer.scrollTop - messageContainer.clientHeight, 'isNotAtBottom:', isNotAtBottom);
     }
 
     // Aggiunge l'event listener per il pulsante di scroll
@@ -25,7 +29,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // Aggiunge l'event listener per lo scroll della chat
-    chatContainer.addEventListener('scroll', updateScrollButtonVisibility);
+    messageContainer.addEventListener('scroll', updateScrollButtonVisibility);
 
     // Funzione per ridimensionare automaticamente la textarea
     function autoResizeTextarea() {
@@ -63,6 +67,11 @@ document.addEventListener('DOMContentLoaded', function () {
         } else if (data.type === 'error') {
             addBotMessage('Errore: ' + data.text);
         }
+        // Forza lo scroll dopo un breve ritardo per assicurarsi che il contenuto sia stato renderizzato
+        setTimeout(function() {
+            scrollToBottom();
+            // updateScrollButtonVisibility viene già chiamato dentro scrollToBottom
+        }, 100);
         hideLoading();
 
     });
@@ -120,7 +129,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Funzione per scorrere automaticamente verso il basso
     function scrollToBottom() {
-        chatContainer.scrollTop = chatContainer.scrollHeight;
+        // Usa scrollTo con behavior: 'smooth' per creare un'animazione di scroll fluida
+        requestAnimationFrame(() => {
+            messageContainer.scrollTo({
+                top: messageContainer.scrollHeight,
+                behavior: 'smooth'
+            });
+            // Aggiorna la visibilità del pulsante dopo lo scroll
+            setTimeout(() => {
+                updateScrollButtonVisibility();
+            }, 300); // Aumentato il ritardo per dare tempo all'animazione di completarsi
+        });
     }
 
     function addUserMessage(text) {
@@ -129,10 +148,11 @@ document.addEventListener('DOMContentLoaded', function () {
         messageDiv.className = 'message user-message';
         messageDiv.textContent = text;
         messageContainer.appendChild(messageDiv);
-        if (wasAtBottom) {
+        // Forza lo scroll dopo un breve ritardo per assicurarsi che il contenuto sia stato renderizzato
+        setTimeout(function() {
             scrollToBottom();
-        }
-        updateScrollButtonVisibility();
+            // updateScrollButtonVisibility viene già chiamato dentro scrollToBottom
+        }, 50);
     }
 
     // Add a bot message to the chat with Markdown support
@@ -160,10 +180,12 @@ document.addEventListener('DOMContentLoaded', function () {
         // Utilizziamo marked per convertire il testo Markdown in HTML
         messageDiv.innerHTML += marked.parse(text);
         messageContainer.appendChild(messageDiv);
-        if (wasAtBottom) {
+        
+        // Forza lo scroll dopo un breve ritardo per assicurarsi che il contenuto sia stato renderizzato
+        setTimeout(function() {
             scrollToBottom();
-        }
-        updateScrollButtonVisibility();
+            // updateScrollButtonVisibility viene già chiamato dentro scrollToBottom
+        }, 50);
     }
     
     // Funzione dedicata per aggiungere messaggi di errore
@@ -175,10 +197,12 @@ document.addEventListener('DOMContentLoaded', function () {
         // Utilizziamo marked per convertire il testo Markdown in HTML
         messageDiv.innerHTML = marked.parse(text);
         messageContainer.appendChild(messageDiv);
-        if (wasAtBottom) {
+        
+        // Forza lo scroll dopo un breve ritardo per assicurarsi che il contenuto sia stato renderizzato
+        setTimeout(function() {
             scrollToBottom();
-        }
-        updateScrollButtonVisibility();
+            // updateScrollButtonVisibility viene già chiamato dentro scrollToBottom
+        }, 50);
     }
 
     // Add a user audio message to the chat
@@ -263,8 +287,12 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         messageContainer.appendChild(messageDiv);
-        chatContainer.scrollTop = chatContainer.scrollHeight;
-        updateScrollButtonVisibility();
+        
+        // Forza lo scroll dopo un breve ritardo per assicurarsi che il contenuto sia stato renderizzato
+        setTimeout(function() {
+            scrollToBottom();
+            // updateScrollButtonVisibility viene già chiamato dentro scrollToBottom
+        }, 50);
 
         return messageId;
     }
@@ -285,7 +313,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.warn("L'elemento ',audio-transcription' non trovato per l'ID messaggio:", messageId);
             }
 
-            chatContainer.scrollTop = chatContainer.scrollHeight;
+            scrollToBottom();
         } else {
             console.warn("Messaggio non trovato per l'ID:", messageId);
         }

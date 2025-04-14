@@ -195,22 +195,24 @@
 
 /* Pulsante scroll to bottom */
 .scroll-to-bottom {
-    position: fixed;
-    right: 20px;
-    bottom: 90px;
+    position: absolute;
+    right: 10px;
+    top: -60px; /* Posizionato in alto sopra i messaggi */
     background-color: var(--primary-color);
     color: white;
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    display: none;
+    display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     border: none;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-    transition: background-color 0.3s, transform 0.3s;
+    transition: background-color 0.3s, transform 0.3s, opacity 0.3s;
     z-index: 1000;
+    opacity: 0;
+    margin-top: 10px; /* Aggiunto margine superiore per migliorare la visibilità */
 }
 
 .scroll-to-bottom:hover {
@@ -222,6 +224,11 @@
     width: 24px;
     height: 24px;
     fill: currentColor;
+    display: block;
+    margin: 0 auto;
+    position: relative;
+    top: 21%;
+    transform: translateY(-50%);
 }
 
 * {
