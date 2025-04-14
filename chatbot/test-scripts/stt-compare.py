@@ -19,7 +19,7 @@ os.environ['SSL_CERT_FILE'] = certifi.where()
 
 # Aggiungi il percorso relativo al sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
-import pyLib.WhisperListener as wl
+import chatLib.WhisperListener as wl
 
 
 

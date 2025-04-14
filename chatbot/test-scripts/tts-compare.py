@@ -14,7 +14,7 @@ import os
 
 # Aggiungi il percorso relativo al sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
-from pyLib import AudioPlayer as ap
+from chatLib import AudioPlayer as ap
 
 if __name__ == '__main__':
     # Parse command-line arguments

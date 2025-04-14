@@ -8,10 +8,10 @@ from flask_socketio import SocketIO
 
 # Importa la classe IfabChatWebSocket dal ifabChatWebSocket.py
 from ifabChatWebSocket import IfabChatWebSocket
-from pyLib import AudioPlayer as ap
-from pyLib import WhisperListener as wl
-from pyLib.text_utils import clean_markdown_for_tts
-from pyLib.util import *
+from chatLib import AudioPlayer as ap
+from chatLib import WhisperListener as wl
+from chatLib.text_utils import clean_markdown_for_tts
+from chatLib.util import *
 
 """
 Flask WebSocket server per la comunicazione con il bot 

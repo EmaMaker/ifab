@@ -5,8 +5,8 @@ import sys
 
 chatbotDir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir))
 sys.path.append(chatbotDir)
-from pyLib.text_utils import clean_markdown_for_tts
-from pyLib.AudioPlayer import AudioPlayer
+from chatLib.text_utils import clean_markdown_for_tts
+from chatLib.AudioPlayer import AudioPlayer
 
 # Testo di esempio simile a quello fornito dall'utente
 test_text = '''Non posso formattare il testo in **grassetto** o *corsivo*. Tuttavia, posso elencare le parti della Roland: 

@@ -9,7 +9,7 @@ import certifi
 import requests
 import websocket
 
-from pyLib.util import *
+from chatLib.util import *
 
 # Add this line near the beginning of your code, before any network requests
 os.environ['SSL_CERT_FILE'] = certifi.where()

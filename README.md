@@ -1,6 +1,6 @@
 # IFAB Chatbot
 
-Questo progetto implementa un sistema di chatbot interattivo per IFAB, composto da diversi sottosistemi tra cui un'interfaccia web, un sistema di gestione delle telecamere e componenti robotici.
+Questo progetto implementa un sistema di chatbot interattivo per IFAB, composto da diversi sottosistemi tra cui un'interfaccia web con supporto per sintesi vocale (TTS) e riconoscimento vocale (STT), un sistema di gestione delle telecamere e componenti robotici.
 
 ## Struttura del Progetto
 
@@ -8,7 +8,7 @@ Il progetto è organizzato nelle seguenti directory principali:
 
 - `chatbot/`: Contiene l'implementazione del chatbot web e relativi script
   - `ifabWebChat/`: Interfaccia web del chatbot
-  - `pyLib/`: Librerie Python di supporto
+  - `chatLib/`: Librerie Python di supporto
   - `test-scripts/`: Script di test per il chatbot
   - `tts-model/`: Modelli per la sintesi vocale (Text-to-Speech)
 - `Camera-SubSystem/`: Sistema di gestione delle telecamere
@@ -59,6 +59,7 @@ Il progetto utilizza le seguenti librerie Python principali:
 - **Flask, Flask-Cors, Flask-SocketIO**: Framework web per l'interfaccia del chatbot
 - **Requests, Websocket-client**: Gestione delle richieste HTTP e WebSocket
 - **Piper-tts**: Sintesi vocale (Text-to-Speech)
+- **WhisperX**: Riconoscimento vocale (Speech-to-Text)
 - **OpenCV (opencv-python)**: Elaborazione delle immagini e gestione delle telecamere
 - **NumPy, Matplotlib**: Elaborazione numerica e visualizzazione
 - **SoundDevice**: Riproduzione audio
@@ -75,14 +76,24 @@ Per installare le dipendenze npm:
 npm install
 ```
 
-## Avvio del Chatbot Web
+## Avvio della demo Chatbot Web
 
 Per avviare l'interfaccia web del chatbot:
 
 ```bash
-cd chatbot/ifabWebChat
-python flaskFrontEnd.py
+python chatbot/flaskFrontEnd.py [opzioni]
 ```
+
+### Opzioni disponibili
+
+- `--host HOST`: Host del server (default: '0.0.0.0')
+- `--port PORT`: Porta del server (default: '8000')
+- `--tts_model TTS_MODEL`: Path al modello Piper-TTS (default: 'chatbot/tts-model/it_IT-paola-medium.onnx')
+- `--stt_model STT_MODEL`: Nome del modello Whisper (default: 'large-v3')
+- `--device DEVICE`: Dispositivo per eseguire il modello (cpu o cuda, default: 'cuda')
+- `--language LANGUAGE`: Lingua dell'audio (default: 'it')
+- `--batch_size BATCH_SIZE`: Dimensione del batch per l'elaborazione (default: '16')
+- `--compute_type COMPUTE_TYPE`: Tipo di calcolo (float32 o int8, default: 'float32')
 
 ## Contribuire al Progetto
 
