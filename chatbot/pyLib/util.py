@@ -1,7 +1,7 @@
 import os
+import traceback
 from enum import Enum, auto
 from textwrap import TextWrapper, indent
-import traceback
 
 
 class StyleBox(Enum):
@@ -10,6 +10,7 @@ class StyleBox(Enum):
     Bold = auto()  # ━━━━━━━━━━━
     Dash_Bold = auto()  # ┅┅┅┅┅┅┅┅┅┅
     Dash_Light = auto()  # ┄┄┄┄┄┄┄┄┄┄
+    Error = auto()  # Per messaggi di errore
 
 
 """
@@ -30,6 +31,8 @@ def create_box(string, styleName: StyleBox = StyleBox.Double) -> str:
             corner = ("┏", "┓", "┗", "┛", "┅", "┇")
         case StyleBox.Dash_Light:
             corner = ("╭", "╮", "╰", "╯", "┄", "┆")
+        case StyleBox.Error:
+            corner = ("┏", "┓", "┗", "┛", "┅", "┇")  # Usa lo stesso stile di Dash_Bold per gli errori
         case _:
             corner = ("╔", "╗", "╚", "╝", "═", "║")
     lines = string.replace("\t", "  ").splitlines()

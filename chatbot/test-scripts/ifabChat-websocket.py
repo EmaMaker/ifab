@@ -3,11 +3,10 @@ import sys
 import threading
 import time
 from enum import Enum, auto
-from textwrap import TextWrapper, indent
+from textwrap import TextWrapper
 
 import requests
 import websocket
-
 
 # Configuration
 url = "https://europe.directline.botframework.com/v3/directline/conversations"
@@ -18,6 +17,7 @@ headers = {
 
 wrapper = TextWrapper(width=150)
 USER_ID = "user1"  # User ID for the conversation
+
 
 class StyleBox(Enum):
     Double = auto()  # ══════════
@@ -87,7 +87,7 @@ class IfabChatWebSocket:
 
                         # Clear the current line and print the bot's response
                         sys.stdout.write('\r' + ' ' * 50 + '\r')
-                        messageBox("Copilot response:",activity.get('text', ''))
+                        messageBox("Copilot response:", activity.get('text', ''))
                         self.waiting_for_response = False
 
                     # Update watermark

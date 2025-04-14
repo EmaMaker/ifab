@@ -2,7 +2,6 @@ import time
 
 import requests
 
-
 url = "https://europe.directline.botframework.com/v3/directline/conversations"
 headers = {
     "Authorization": "Bearer Ec99xFUkF1i7cR8m5TLtPokIlKXvLNdCxIYyDsraweBmf2zltwUZJQQJ99BCACi5YpzAArohAAABAZBSECEz.IpVjYOfmWMOQOHYGdH4G16pGKUArN1pEpAGJebfBjSrKI71E6ZhDJQQJ99BCACi5YpzAArohAAABAZBSMCrh",

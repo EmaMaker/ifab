@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
-import sys
 import os
+import sys
+
 chatbotDir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir))
 sys.path.append(chatbotDir)
 from pyLib.text_utils import clean_markdown_for_tts

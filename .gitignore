@@ -1,4 +1,14 @@
 **/__pycache__/
+robot/.vscode
+robot/.vscode/.browse.c_cpp.db*
+robot/.vscode/c_cpp_properties.json
+robot/.vscode/launch.json
+robot/.vscode/ipch
+
+package-lock.json
+
+envEnelSetup.sh
+
 **/node_modules/
 **/bower_components/
 **/dist/

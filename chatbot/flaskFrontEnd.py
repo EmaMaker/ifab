@@ -1,4 +1,3 @@
-from pydoc import text
 import shutil
 import threading
 import time
@@ -11,15 +10,17 @@ from flask_socketio import SocketIO
 # Importa la classe IfabChatWebSocket dal ifabChatWebSocket.py
 from ifabChatWebSocket import IfabChatWebSocket
 from pyLib import AudioPlayer as ap
-from pyLib.util import *
 from pyLib.text_utils import clean_markdown_for_tts
+from pyLib.util import *
 
 """
 Flask WebSocket server per la comunicazione con il bot 
 @param url:                 URL del bot
 @param auth:                Token di autenticazione per il bot
-@param button_list_dx/sx:   Lista di tuple contenenti il testo e il percorso dell'immagine per i pulsanti statici
-                            [(text, image_path), ...]
+@param jobStation_list_top: Lista di dizionari contenenti il testo, il percorso dell'immagine per i pulsanti statici e la key del pulsante
+                                [{text:"...", image_path:"...", say:"...", key:"..."}, ...]
+@param machine_list_bot:    Lista di dizionari contenenti il testo, il percorso dell'immagine per i pulsanti statici e la key del pulsante
+                                [{text:"...", image_path:"...", say:"...", key:"..."}, ...]
 @param sttFun:              Funzione di callback per la trascrizione audio (opzionale)
                             @param sttFun(pathToAudio) -> Transcription | None
 @param ttsFun:              Funzione di callback per la sintesi vocale (opzionale)
@@ -27,20 +28,23 @@ Flask WebSocket server per la comunicazione con il bot
 """
 
 
-def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list_dx: tuple[str, str],
+def create_app(url: str, auth: str,
+               jobStation_list_top: list[dict[str, str, str, str]],
+               machine_list_bot: list[dict[str, str, str, str]],
                sttFun: Callable[[str], str | None] = None,
-               ttsFun: Callable[[str], None] = None) -> tuple[
+               ttsFun: Callable[[str], None] = None,
+               goBotFun: Callable[[str], None] = None) -> tuple[
     Flask, SocketIO, IfabChatWebSocket]:
     """Crea e restituisce l'istanza dell'app Flask, socketio e client WebSocket, con tutti i callback"""
 
     # Callback per gestire l'inoltro dei messaggi dal backend (bot o stt) al frontend
     # se ho un messaggio ID, allora devo aggiornare quel baloon
-    def backEnd_msg2UI(text, message_id=None):
+    def backEnd_msg2UI(text, message_id=None, audio_enable=True):
         """Callback function for when a message is received from the bot"""
         if not message_id:  # Nessuno ID messaggio, quindi è un messaggio normale
             messageBox("Send new message to frontEnd", text, StyleBox.Dash_Light)
             message_data = {'type': 'message', 'text': text}
-            if ttsFun:
+            if ttsFun and audio_enable:
                 # Pulisci il testo da elementi Markdown prima di inviarlo al TTS
                 clean_text = clean_markdown_for_tts(text)
                 messageBox("Send to TTS", clean_text, StyleBox.Dash_Light)
@@ -54,6 +58,7 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
 
     def bot_err2UI(error_text):
         """Callback function for when an error occurs"""
+        messageBox("Errore invio al frontend", error_text, StyleBox.Error)
         socketio.emit('message', {'type': 'error', 'text': error_text})
 
     # Mock function for STT (Speech-to-Text) processing
@@ -76,43 +81,39 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
     socketio = SocketIO(app, cors_allowed_origins="*")  # Inizializza SocketIO con CORS abilitato tra il backend python ed il frontend Flask
 
     # Configurazione delle callback esterne
-    stt_funx = sttFun if sttFun else stt_mock  # Se non viene fornita una funzione STT, usa la funzione di mock
-    # TODO: Callback a piper per gestire la creazione degli audio
+    stt_fun = sttFun if sttFun else stt_mock  # Se non viene fornita una funzione STT, usa la funzione di mock
 
     # Registra i callback per gestire l'inoltro dei messaggi dal bot al frontend
     chat_client.add_message_callback(backEnd_msg2UI)
     chat_client.add_error_callback(bot_err2UI)
-    
-    # Gestione dell'evento di connessione Socket.IO
-    @socketio.on('connect')
-    def handle_connect():
-        """Gestisce l'evento di connessione di un client Socket.IO"""
-        messageBox("Nuova connessione frontend", "Avvio nuova conversazione con il bot", StyleBox.Dash_Bold)
-        
-        # Invia un messaggio di benvenuto all'utente
-        socketio.emit('message', {'type': 'message', 'text': 'Benvenuto! Puoi scrivere un messaggio o registrare un messaggio vocale.'})
-        
-        # Gestione più robusta della connessione
-        try:
-            if chat_client.running:
-                messageBox("Chiusura conversazione", "Chiudo la conversazione precedente con il bot", StyleBox.Light)
-                chat_client.stop_conversation()
-                # Breve pausa per assicurarsi che la connessione precedente sia completamente chiusa
-                time.sleep(0.5)
-            
-            # Tenta di avviare una nuova conversazione
-            if not chat_client.start_conversation():
-                messageBox("Errore connessione", "Impossibile avviare la conversazione con il bot", StyleBox.Error)
-                socketio.emit('message', {'type': 'error', 'text': 'Impossibile avviare la conversazione con il bot'})
-        except Exception as e:
-            messageBox("Errore connessione", f"Errore durante l'avvio della conversazione: {str(e)}", StyleBox.Error)
-            socketio.emit('message', {'type': 'error', 'text': f'Errore durante la connessione: {str(e)}'})
 
     # Crea una directory temporanea vuota all'avvio del server
     temp_dir = os.path.join(os.path.dirname(__file__), 'temp')
     if os.path.exists(temp_dir):
         shutil.rmtree(temp_dir)  # Rimuovi la directory temporanea esistente
     os.makedirs(temp_dir, exist_ok=True)
+
+    # Gestione dell'evento di connessione Socket.IO
+    @socketio.on('connect')
+    def handle_connect():
+        """Gestisce l'evento di connessione di un client Socket.IO"""
+        messageBox("Nuova connessione frontend", "Avvio nuova conversazione con il bot", StyleBox.Dash_Bold)
+        # Invia un messaggio di benvenuto all'utente
+        backEnd_msg2UI('Benvenuto! Puoi scrivere un messaggio o registrare un messaggio vocale.', audio_enable=False)
+        # Gestione più robusta della connessione
+        try:
+            if chat_client.running:
+                messageBox("Chiusura conversazione", "Chiudo la conversazione precedente con il bot", StyleBox.Light)
+                chat_client.stop_conversation()
+                time.sleep(0.5)  # Breve pausa per assicurarsi che la connessione precedente sia completamente chiusa
+            # Tenta di avviare una nuova conversazione
+            if not chat_client.start_conversation():
+                messageBox("Errore connessione", "Impossibile avviare la conversazione con il bot", StyleBox.Error)
+                # Invia un messaggio di errore al frontend
+                socketio.emit('message', {'type': 'error', 'text': 'Impossibile avviare la conversazione con il bot'})
+        except Exception as e:
+            messageBox("Errore connessione", f"Errore durante l'avvio della conversazione: {str(e)}", StyleBox.Error)
+            socketio.emit('message', {'type': 'error', 'text': f'Errore durante la connessione: {str(e)}'})
 
     # Aggiungi una route per servire le immagini statiche
     @app.route('/images/<path:filename>')
@@ -143,41 +144,33 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
     def index():
         """Serve the main HTML page"""
 
-        # Verifica l'esistenza dei file immagine
-        def verify_buttons(button_list):
-            verified_buttons = []
-            for text, img_path in button_list:
-                # Se l'immagine esiste, usa il percorso, altrimenti imposta a None
-                full_path = os.path.join(os.path.dirname(__file__), img_path)
-                if os.path.exists(full_path):
-                    verified_buttons.append((text, img_path))
+        def mkHTMLbutton(buttons):
+            html = ''
+            for item in buttons:
+                if "img_path" not in item or "text" not in item or "say" not in item or "key" not in item:
+                    print(f"[WARNING] 'img_path' or 'text' or 'say' or 'key' not in item: {item}")
+                    continue
+                text = item["text"]
+                img_path = item["img_path"]
+                say = item["say"]
+                key = item["key"]
+                if os.path.exists(os.path.join(os.path.dirname(__file__), img_path)):  # Se l'immagine esiste, impostala come sfondo
+                    if not img_path.startswith('/'):  # Assicurati che il percorso dell'immagine inizi con '/'
+                        img_path = '/' + img_path
+                    bg_img = f'style="background-image: url(\'{img_path}\')"'
                 else:
-                    verified_buttons.append((text, None))
-            return verified_buttons
-
-        right_buttons = verify_buttons(button_list_dx)
-        left_buttons = verify_buttons(button_list_sx)
+                    bg_img = ''
+                html += f'<button class="static-btn" data-say="{say}" data-key="{key}" {bg_img}><span>{text}</span></button>\n'
+            return html
 
         # Crea HTML per i pulsanti di sinistra
         # Leggi il contenuto del file HTML
         with open(os.path.join(os.path.dirname(__file__), 'web-client/index.html'), 'r') as file:
             html_content = file.read()
 
-        def mkHTMLbutton(buttons):
-            html = ''
-            for text, img_path in buttons:
-                if img_path:
-                    # Assicurati che il percorso dell'immagine inizi con '/'
-                    if not img_path.startswith('/'):
-                        img_path = '/' + img_path
-                    html += f'<button class="static-btn" style="background-image: url(\'{img_path}\')">' + '<span>' + f'{text}' + '</span>' + '</button>\n'
-                else:
-                    html += f'<button class="static-btn"><span>{text}</span></button>\n'
-            return html
-
         # Sostituisci i placeholder nel template
-        html_content = html_content.replace('<!-- STATIC_BUTTONS_LEFT -->', mkHTMLbutton(left_buttons))
-        html_content = html_content.replace('<!-- STATIC_BUTTONS_RIGHT -->', mkHTMLbutton(right_buttons))
+        html_content = html_content.replace('<!-- STATIC_BUTTONS_JOB_STATION -->', mkHTMLbutton(jobStation_list_top))
+        html_content = html_content.replace('<!-- STATIC_BUTTONS_MACHINE -->', mkHTMLbutton(machine_list_bot))
 
         return html_content
 
@@ -197,6 +190,7 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
             if not chat_client.running:
                 messageBox("Riconnessione", "Tentativo di riavvio della conversazione", StyleBox.Light)
                 if not chat_client.start_conversation():
+                    messageBox("Errore connessione", "Impossibile avviare la conversazione", StyleBox.Error)
                     return jsonify({'success': False, 'error': 'Impossibile avviare la conversazione'}), 500
                 # Breve pausa per assicurarsi che la connessione sia stabilita
                 time.sleep(0.5)
@@ -217,38 +211,19 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
     def button_click():
         """Handle button click events without sending to chatbot"""
         data = request.json
-        if not data or 'text' not in data:
-            return jsonify({'success': False, 'error': 'No text provided'}), 400
+        if not data or 'key' not in data or 'say' not in data:
+            return jsonify({'success': False, 'error': 'No "key" or "say" provided'}), 400
 
-        button_text = data['text']
-
-        # Verifica se il testo corrisponde a uno dei pulsanti statici
-        is_valid_button = False
-        for text, _ in button_list_sx + button_list_dx:
-            if button_text.strip() == text.strip():
-                is_valid_button = True
-                break
-
-        if not is_valid_button:
-            return jsonify({'success': False, 'error': 'Invalid button text'}), 400
+        key = data['key']
+        say = data['say']
 
         # Stampa il testo del pulsante nel server per debug
-        messageBox("Frontend comando", button_text, StyleBox.Light)
-        # TODO: Gestione del comando da inviare alla camera in base al bottone
-        # TODO: magari aggiungere una callback esterna
-        # Qui puoi aggiungere la logica per gestire il comando
-        # Invece di inviare il messaggio al chatbot, registra solo il comando
-        # che verrà poi utilizzato per chiamare altre funzioni
-
-        # Esempio di come potresti gestire diversi comandi:
-        # if button_text == "Aiuto":
-        #     # Chiama una funzione specifica per l'aiuto
-        #     pass
-        # elif button_text == "Informazioni":
-        #     # Chiama una funzione specifica per le informazioni
-        #     pass
-
-        return jsonify({'success': True, 'command': button_text})
+        messageBox("Frontend al click di un pulsante invia chiave", f"key: {key}\nsay: {say}", StyleBox.Light)
+        if goBotFun:
+            goBotFun(key)  # Invia il nuovo target al robot
+        if ttsFun:
+            ttsFun(say)  # Invia il messaggio al TTS
+        return jsonify({'success': True, 'key': key})
 
     # Aggiungi una route per gestire l'invio di un messaggio audio
     @app.route('/upload-audio', methods=['POST'])
@@ -275,6 +250,9 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
             if not chat_client.running:
                 messageBox("Riconnessione", "Tentativo di riavvio della conversazione per audio", StyleBox.Light)
                 if not chat_client.start_conversation():
+                    messageBox("Errore connessione", "Impossibile avviare la conversazione per audio", StyleBox.Error)
+                    # Invia un messaggio di errore al frontend
+                    socketio.emit('message', {'type': 'error', 'text': 'Impossibile avviare la conversazione. Riprova più tardi.'})
                     return jsonify({'success': False, 'error': 'Impossibile avviare la conversazione'}), 500
                 # Breve pausa per assicurarsi che la connessione sia stabilita
                 time.sleep(0.5)
@@ -284,11 +262,11 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
 
             # Invia il messaggio audio al bot in un thread separato per non bloccare la risposta HTTP
             def send_audio_thread(audio_path, message_id):
-                stt_audio_text = stt_funx(audio_path=audio_path)
+                stt_audio_text = stt_fun(audio_path=audio_path)
                 if stt_audio_text:
                     messageBox("Backend audio STT", f"Trascrizione audio: {stt_audio_text}", StyleBox.Light)
                     backEnd_msg2UI(stt_audio_text, message_id=message_id)  # Invia messaggio trascritto al frontend
-                    if stt_funx is not stt_mock:  # Invia messaggio trascritto al bot solo se veramente trascritto
+                    if stt_fun is not stt_mock:  # Invia messaggio trascritto al bot solo se veramente trascritto
                         messageBox("Backend audio STT to Bot", "Trascrizione audio inviata al bot", StyleBox.Light)
                         chat_client.send_message(stt_audio_text)
                     else:
@@ -302,7 +280,7 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
 
             threading.Thread(target=send_audio_thread, args=(temp_path, message_id,)).start()
             return jsonify({'success': True, 'file_path': audio_url, 'message_id': message_id})
-            
+
         except Exception as e:
             messageBox("Errore audio", f"Errore durante l'elaborazione dell'audio: {str(e)}", StyleBox.Error)
             return jsonify({'success': False, 'error': f'Errore durante l\'elaborazione: {str(e)}'}), 500
@@ -313,7 +291,7 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
         """Serve temporary audio files"""
         temp_dir = os.path.join(os.path.dirname(__file__), 'temp')
         return send_from_directory(temp_dir, filename)
-        
+
     # Aggiungi una route per verificare lo stato della connessione
     @app.route('/check-connection', methods=['GET'])
     def check_connection():
@@ -322,12 +300,12 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
         if not is_connected:
             # Tenta di riavviare la connessione se non è attiva
             is_connected = chat_client.start_conversation()
-        
+
         return jsonify({
             'connected': is_connected,
             'status': 'active' if is_connected else 'disconnected'
         })
-        
+
     # Aggiungi una route per la pagina "Chi siamo"
     @app.route('/about')
     def about():
@@ -335,7 +313,7 @@ def create_app(url: str, auth: str, button_list_sx: tuple[str, str], button_list
         with open(os.path.join(os.path.dirname(__file__), 'web-client/about.html'), 'r') as file:
             html_content = file.read()
         return html_content
-        
+
     # Gestione dell'evento di disconnessione Socket.IO
     @socketio.on('disconnect')
     def handle_disconnect():
@@ -371,18 +349,18 @@ if __name__ == '__main__':
     auth = "Bearer BI91xBzzXppQiRxyBjniBLPFctD8IGqIR0BCmQCyODxSZrZjLX7QJQQJ99BDACi5YpzAArohAAABAZBS4vKQ.DEsKhbDDeYsTi7cHcOgSMV4HrdEnNrJAPp8hTnCv55nxFqtKRfonJQQJ99BDACi5YpzAArohAAABAZBS4AHw"
 
     # Lista di pulsanti statici (testo, percorso_immagine)
-    button_sx = [
-        ("Zona saldatura", "images/The_Help_Logo.svg.png"),
-        ("Zona debug", "images/weather.jpg"),
-        ("Zona prototipazione", "images/news.jpg"),
+    zone_lavoro = [
+        {"text": "Zona saldatura", "img_path": "web-client/images/help.jpeg", "say": "Vado a saldare", "key": "saldatura"},
+        {"text": "Zona debug", "img_path": "web-client/images/weather.jpg", "say": "Mi dirigo alla strumentazione di analisi", "key": "debug"},
+        {"text": "Zona prototipazione", "img_path": "images/news.jpg", "say": "Vado sul tavolo di prototipazione", "key": "prototipazione"}
     ]
-    button_dx = [
-        ("Tagliatrice Laser", "images/info.jpg"),
-        ("Stampante 3D", "images/commands.jpg"),
-        ("CNC", "images/music.jpg"),
-        ("Stampante Plotter", "images/info.jpg"),
+    macchinari = [
+        {"text": "Tagliatrice Laser", "img_path": "web-client/images/info.jpg", "say": "Vado dalla Tagliatrice Laser", "key": "laser"},
+        {"text": "Stampante 3D", "img_path": "web-client/images/commands.jpg", "say": "Vado verso la Stampante 3D", "key": "3d"},
+        {"text": "CNC", "img_path": "web-client/images/music.jpg", "say": "Mi dirigo verso la CNC", "key": "cnc"},
+        {"text": "Plotter", "img_path": "web-client/images/info.jpg", "say": "Sto andando dal Plotter", "key": "plotter"}
     ]
-    app, socketio, chat_client = create_app(url, auth, button_sx, button_dx, ttsFun=player.play_text)  # Crea l'app Flask e SocketIO
+    app, socketio, chat_client = create_app(url, auth, zone_lavoro, macchinari, ttsFun=player.play_text)  # Crea l'app Flask e SocketIO
 
     # Avvia il server Flask con SocketIO
     socketio.run(app, host=args.host, port=args.port, debug=True, allow_unsafe_werkzeug=True)  # Avvia il server Flask con SocketIO
