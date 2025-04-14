@@ -8,12 +8,15 @@
 #include "position_ctrl.h"
 #include "wheels.h"
 
-const char* ssid = "FMD";
-const char* password = "Innovation_Phyrtual473";
+#define UDP_PORT 4242
+
+const char* ssid = "Radiomarelli";
+const char* password = "Magnadyn3Radiomarell1Philip5@";
 bool wifi_connected = false;
 
 void setup_ota();
 bool setup_wifi();
+void wifi_receive();
 
 WiFiUDP udp;
 MDNS mdns(udp);
@@ -28,6 +31,7 @@ void setup() {
     digitalWrite(LED_BUILTIN, HIGH);
     setup_ota();
     mdns.begin(WiFi.localIP(), "ifab");
+    udp.begin(4242);
   }
 
   init_position_ctrl();
@@ -36,14 +40,30 @@ void setup() {
 
 void loop() {
   ArduinoOTA.handle();
+  wifi_receive(); 
   update_position_ctrl();
+}
+
+
+char packetBuffer[255];
+void wifi_receive(){
+  // receive robot position, target setpoints from Wifi (UDP)
+  // Formatted in JSON, dictionary with keys "setpoint", "target", "target2"
+  // Each value is a 3x1 array of floats, in order X,Y,Theta of the point
+  int packetSize = udp.parsePacket();
+  if(packetSize){
+    int len = udp.read(packetBuffer, 255);
+    if(len > 0) packetBuffer[len] = '\0';
+    Serial.println(packetBuffer);
+  }
+  
 }
 
 bool setup_wifi(){
   Serial.println("-----");
 
   WiFi.mode(WIFI_STA);
-  WiFi.setHostname("aifab");
+  WiFi.setHostname("ifab");
 
   WiFi.begin(ssid, password);
   int i = 0;
