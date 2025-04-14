@@ -8,43 +8,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Ottieni il riferimento al pulsante di scroll già presente nell'HTML
     const scrollButton = document.getElementById('scrollButton');
-    
-    // Imposta la visibilità iniziale del pulsante
-    updateScrollButtonVisibility();
-
-    // Gestisce la visibilità del pulsante di scroll
-    function updateScrollButtonVisibility() {
-        const threshold = 50;
-        const isNotAtBottom = (messageContainer.scrollHeight - messageContainer.scrollTop - messageContainer.clientHeight) > threshold;
-        // Usa solo l'opacità per mostrare/nascondere il pulsante, mantenendolo sempre nel DOM
-        scrollButton.style.opacity = isNotAtBottom ? '1' : '0';
-        // Disabilita anche gli eventi del mouse quando è nascosto
-        scrollButton.style.pointerEvents = isNotAtBottom ? 'auto' : 'none';
-        console.log('Scroll position:', messageContainer.scrollTop, 'ScrollHeight:', messageContainer.scrollHeight, 'ClientHeight:', messageContainer.clientHeight, 'Difference:', messageContainer.scrollHeight - messageContainer.scrollTop - messageContainer.clientHeight, 'isNotAtBottom:', isNotAtBottom);
-    }
-
-    // Aggiunge l'event listener per il pulsante di scroll
-    scrollButton.addEventListener('click', () => {
-        scrollToBottom();
-    });
-
-    // Aggiunge l'event listener per lo scroll della chat
-    messageContainer.addEventListener('scroll', updateScrollButtonVisibility);
-
-    // Funzione per ridimensionare automaticamente la textarea
-    function autoResizeTextarea() {
-        messageInput.style.height = 'auto';
-        messageInput.style.height = messageInput.scrollHeight + 'px';
-    }
-
-    // Aggiungi event listener per il ridimensionamento automatico
-    messageInput.addEventListener('input', autoResizeTextarea);
-    messageInput.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' && e.shiftKey) {
-            setTimeout(autoResizeTextarea, 0);
-        }
-    });
-
+    // Inizializza la connessione Socket.IO, libreria scaricata nell'index.html
+    const socket = io();
+    // Audio variables
     let isRecording = false;
     let mediaRecorder = null;
     let audioChunks = [];
@@ -54,12 +20,18 @@ document.addEventListener('DOMContentLoaded', function () {
     let microphone = null;
     let animationFrame = null;
     let volumeIndicator = null;
-    let recordingMode = 'toggle'; // Nuova variabile per la modalità di registrazione: 'toggle' o 'push'
+    let recordingMode = 'push'; // Nuova variabile per la modalità di registrazione: 'toggle' o 'push'
     let lastAudioPath = null; // Variabile per tenere traccia dell'ultimo file audio registrato
     let audioMessages = {}; // Oggetto per memorizzare i percorsi audio associati a ciascun messaggio
 
-    // Inizializza la connessione Socket.IO
-    const socket = io();
+
+    // Imposta la visibilità iniziale del pulsante
+    updateScrollButtonVisibility();
+    // Aggiunge l'event listener per il pulsante di scroll
+    scrollButton.addEventListener('click', scrollToBottom);
+    // Aggiunge l'event listener per lo scroll della chat
+    messageContainer.addEventListener('scroll', updateScrollButtonVisibility);
+
 
     socket.on('message', function (data) {
         if (data.type === 'message') {
@@ -67,25 +39,18 @@ document.addEventListener('DOMContentLoaded', function () {
         } else if (data.type === 'error') {
             addBotMessage('Errore: ' + data.text);
         }
-        // Forza lo scroll dopo un breve ritardo per assicurarsi che il contenuto sia stato renderizzato
-        setTimeout(function() {
-            scrollToBottom();
-            // updateScrollButtonVisibility viene già chiamato dentro scrollToBottom
-        }, 100);
+        setTimeout(scrollToBottom, 100); // Forza lo scroll dopo un breve ritardo per assicurarsi che il contenuto sia stato renderizzato
         hideLoading();
-
     });
 
     socket.on('stt', function (data) {
-        // Aggiorna il messaggio specifico usando l'ID fornito dal backend
-        updateAudioMessage(data.messageId, data.text);
-        // hideLoading();
+        updateAudioMessage(data.messageId, data.text); // Aggiorna il messaggio specifico usando l'ID fornito dal backend
     });
 
     // Gestisci gli errori di connessione
     socket.on('connect_error', function (error) {
         console.error('Connection error:', error);
-        addErrorMessage('Errore di connessione al server. Riprova più tardi.');
+        addErrorMessage('Errore di connessione al server. Riprova più tardi.', isGui = true);
         hideLoading();
 
         // Tenta di riconnettersi automaticamente dopo un breve ritardo
@@ -102,11 +67,7 @@ document.addEventListener('DOMContentLoaded', function () {
         fetch('/check-connection')
             .then(response => response.json())
             .then(data => {
-                if (data.connected) {
-                    console.log('Connessione al bot verificata con successo');
-                } else {
-                    console.warn('Connessione al bot non attiva, potrebbe essere necessario ricaricare la pagina');
-                }
+                if (data.connected) console.log('Connessione al bot verificata con successo'); else console.warn('Connessione al bot non attiva, potrebbe essere necessario ricaricare la pagina');
             })
             .catch(err => console.error('Errore durante la verifica della connessione:', err));
     });
@@ -120,53 +81,49 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // Add a user message to the chat
     // Funzione per controllare se l'utente è in fondo alla chat
     function isUserAtBottom() {
         const threshold = 50; // Soglia di tolleranza in pixel
-        return (chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight) <= threshold;
+        return (messageContainer.scrollHeight - messageContainer.scrollTop - messageContainer.clientHeight) <= threshold;
+    }
+
+    // Gestisce la visibilità del pulsante di scroll
+    function updateScrollButtonVisibility() {
+        const isNotAtBottom = !isUserAtBottom();
+        scrollButton.style.opacity = isNotAtBottom ? '1' : '0';         // Usa solo l'opacità per mostrare/nascondere il pulsante, mantenendolo sempre nel DOM
+        scrollButton.style.pointerEvents = isNotAtBottom ? 'auto' : 'none';         // Disabilita anche gli eventi del mouse quando è nascosto
     }
 
     // Funzione per scorrere automaticamente verso il basso
     function scrollToBottom() {
         // Usa scrollTo con behavior: 'smooth' per creare un'animazione di scroll fluida
         requestAnimationFrame(() => {
-            messageContainer.scrollTo({
-                top: messageContainer.scrollHeight,
-                behavior: 'smooth'
-            });
+            messageContainer.scrollTo({top: messageContainer.scrollHeight, behavior: 'smooth'});
             // Aggiorna la visibilità del pulsante dopo lo scroll
-            setTimeout(() => {
-                updateScrollButtonVisibility();
-            }, 300); // Aumentato il ritardo per dare tempo all'animazione di completarsi
+            setTimeout(updateScrollButtonVisibility, 300); // Aumentato il ritardo per dare tempo all'animazione di completarsi
         });
     }
 
     function addUserMessage(text) {
-        const wasAtBottom = isUserAtBottom();
         const messageDiv = document.createElement('div');
         messageDiv.className = 'message user-message';
         messageDiv.textContent = text;
         messageContainer.appendChild(messageDiv);
         // Forza lo scroll dopo un breve ritardo per assicurarsi che il contenuto sia stato renderizzato
-        setTimeout(function() {
-            scrollToBottom();
-            // updateScrollButtonVisibility viene già chiamato dentro scrollToBottom
-        }, 50);
+        setTimeout(scrollToBottom, 50);
     }
 
     // Add a bot message to the chat with Markdown support
     function addBotMessage(text) {
-        const wasAtBottom = isUserAtBottom();
         const messageDiv = document.createElement('div');
-        
+
         // Verifica se è un messaggio di errore
         if (text.startsWith('Errore:')) {
-            addErrorMessage(text.substring(7).trim()); // Rimuove 'Errore: ' e spazi
+            addErrorMessage(text.substring(7).trim(), isGui = false); // Rimuove 'Errore: ' e spazi
             return;
         } else {
             messageDiv.className = 'message bot-message with-icon';
-            
+
             // Aggiungi l'icona del bot
             const iconDiv = document.createElement('div');
             iconDiv.className = 'bot-icon';
@@ -176,33 +133,24 @@ document.addEventListener('DOMContentLoaded', function () {
             iconDiv.appendChild(iconImg);
             messageDiv.appendChild(iconDiv);
         }
-        
+
         // Utilizziamo marked per convertire il testo Markdown in HTML
         messageDiv.innerHTML += marked.parse(text);
         messageContainer.appendChild(messageDiv);
-        
+
         // Forza lo scroll dopo un breve ritardo per assicurarsi che il contenuto sia stato renderizzato
-        setTimeout(function() {
-            scrollToBottom();
-            // updateScrollButtonVisibility viene già chiamato dentro scrollToBottom
-        }, 50);
+        setTimeout(scrollToBottom, 50);
     }
-    
+
     // Funzione dedicata per aggiungere messaggi di errore
-    function addErrorMessage(text) {
-        const wasAtBottom = isUserAtBottom();
+    function addErrorMessage(text, isGui) {
         const messageDiv = document.createElement('div');
-        messageDiv.className = 'message error-message';
-        
+        messageDiv.className = 'message';
+        if (isGui) messageDiv.className += ' error-message-gui'; else messageDiv.className += ' error-message';
+
         // Utilizziamo marked per convertire il testo Markdown in HTML
         messageDiv.innerHTML = marked.parse(text);
         messageContainer.appendChild(messageDiv);
-        
-        // Forza lo scroll dopo un breve ritardo per assicurarsi che il contenuto sia stato renderizzato
-        setTimeout(function() {
-            scrollToBottom();
-            // updateScrollButtonVisibility viene già chiamato dentro scrollToBottom
-        }, 50);
     }
 
     // Add a user audio message to the chat
@@ -287,13 +235,9 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         messageContainer.appendChild(messageDiv);
-        
-        // Forza lo scroll dopo un breve ritardo per assicurarsi che il contenuto sia stato renderizzato
-        setTimeout(function() {
-            scrollToBottom();
-            // updateScrollButtonVisibility viene già chiamato dentro scrollToBottom
-        }, 50);
 
+        // Forza lo scroll dopo un breve ritardo per assicurarsi che il contenuto sia stato renderizzato
+        setTimeout(scrollToBottom, 50);
         return messageId;
     }
 
@@ -312,36 +256,30 @@ document.addEventListener('DOMContentLoaded', function () {
             } else {
                 console.warn("L'elemento ',audio-transcription' non trovato per l'ID messaggio:", messageId);
             }
-
-            scrollToBottom();
         } else {
             console.warn("Messaggio non trovato per l'ID:", messageId);
         }
     }
 
-// Show loading animation
+    // Show loading animation
     function showLoading(msg = 'In attesa di risposta') {
         isWaitingForResponse = true;
         statusElement.innerHTML = `<div class="loading-animation"><div></div><div></div><div></div><div></div></div>${msg}<div class="loading-animation"><div></div><div></div><div></div><div></div></div>`;
         sendButton.disabled = true;
         recordButton.disabled = true;
-
-        // Disabilita i pulsanti statici
-        setStaticButtonsState(true);
+        setStaticButtonsState(true); // Disabilita i pulsanti statici
     }
 
-// Hide loading animation
+    // Hide loading animation
     function hideLoading() {
         isWaitingForResponse = false;
         statusElement.innerHTML = '';
         sendButton.disabled = false;
         recordButton.disabled = false;
-
-        // Riabilita i pulsanti statici
-        setStaticButtonsState(false);
+        setStaticButtonsState(false); // Riabilita i pulsanti statici
     }
 
-// Send a text message
+    // Send a text message
     function sendTextMessage(text) {
         if (text === '') return;
 
@@ -351,11 +289,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Send the message to the server
         fetch('/send-message', {
-            method: 'POST',
-            headers: {
+            method: 'POST', headers: {
                 'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({text: text})
+            }, body: JSON.stringify({text: text})
         })
             .then(response => {
                 if (!response.ok) {
@@ -368,12 +304,12 @@ document.addEventListener('DOMContentLoaded', function () {
             })
             .catch(error => {
                 console.error('Error:', error);
-                addErrorMessage("Si è verificato un errore durante l'invio del messaggio.");
+                addErrorMessage("Si è verificato un errore durante l'invio del messaggio.", isGui = false);
                 hideLoading();
             });
     }
 
-// Check microphone permissions
+    // Check microphone permissions
     async function checkMicrophonePermission() {
         try {
             // Verifica se l'API permissions è supportata
@@ -406,7 +342,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-// Start recording audio
+    // Start recording audio
     async function startRecording() {
         if (isRecording || isWaitingForResponse) return;
 
@@ -432,7 +368,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
             isRecording = true;
             recordButton.classList.add('recording');
-            statusElement.textContent = 'Registrazione in corso... Clicca di nuovo per terminare';
+            statusElement.textContent = 'Registrazione in corso...';
+            if (recordingMode === 'toggle') statusElement.textContent += 'Clicca di nuovo per terminare';
 
             // Crea l'indicatore del volume
             volumeIndicator = document.createElement('div');
@@ -488,8 +425,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 showLoading();
 
                 fetch('/upload-audio', {
-                    method: 'POST',
-                    body: formData
+                    method: 'POST', body: formData
                 })
                     .then(response => {
                         if (!response.ok) {
@@ -560,12 +496,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
         } catch (error) {
             console.error('Error starting recording:', error);
-            addErrorMessage("Si è verificato un errore durante l'avvio della registrazione.");
+            addErrorMessage("Si è verificato un errore durante l'avvio della registrazione.", isGui = true);
             cleanupAudioResources();
         }
     }
 
-// Stop recording audio
+    // Stop recording audio
     function stopRecording() {
         if (!isRecording) return;
 
@@ -580,7 +516,7 @@ document.addEventListener('DOMContentLoaded', function () {
         cleanupAudioResources();
     }
 
-// Cleanup audio resources
+    // Cleanup audio resources
     function cleanupAudioResources() {
         if (animationFrame) {
             cancelAnimationFrame(animationFrame);
@@ -605,17 +541,26 @@ document.addEventListener('DOMContentLoaded', function () {
         analyser = null;
     }
 
-// Event listeners
+    // Funzione per ridimensionare automaticamente la textarea
+    function autoResizeTextarea() {
+        messageInput.style.height = 'auto';
+        messageInput.style.height = messageInput.scrollHeight + 'px';
+    }
+
+    // Aggiungi event listener per il ridimensionamento automatico e gestione del "a capo" nell'input box
+    messageInput.addEventListener('input', autoResizeTextarea);
     messageInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             if (e.shiftKey) {
-                // Permette l'inserimento di una nuova riga quando si preme Shift+Invio
-                // Non facciamo nulla, lasciando che il comportamento predefinito inserisca una nuova riga
-
-            } else {
-                e.preventDefault();
-                sendTextMessage(messageInput.value.trim());
+                autoResizeTextarea();  // Permette l'inserimento di una nuova riga quando si preme Shift+Invio ed il ridimensionamento del box
+                return;
             }
+            if (sendButton.disabled) {
+                e.preventDefault(); // Impedisce l'aggiunta di una nuova riga
+                return; // Non fare nulla se il pulsante di invio è disabilitato
+            }
+            e.preventDefault();
+            sendTextMessage(messageInput.value.trim());
         }
     });
 
@@ -623,7 +568,7 @@ document.addEventListener('DOMContentLoaded', function () {
         sendTextMessage(messageInput.value.trim());
     });
 
-// Modifica gli event listener per il pulsante di registrazione
+    // Modifica gli event listener per il pulsante di registrazione
     if (recordingMode === 'push') {
         // Modalità push-to-talk (registra solo mentre è premuto)
         recordButton.addEventListener('mousedown', startRecording);
@@ -650,39 +595,30 @@ document.addEventListener('DOMContentLoaded', function () {
         // Per dispositivi touch
         recordButton.addEventListener('touchend', (e) => {
             e.preventDefault();
-            if (isRecording) {
-                stopRecording();
-            } else {
-                startRecording();
-            }
+            if (isRecording) stopRecording(); else startRecording();
         });
     }
 
-// Funzione per abilitare/disabilitare tutti i pulsanti statici
+    // Funzione per abilitare/disabilitare tutti i pulsanti statici
     function setStaticButtonsState(disabled) {
         document.querySelectorAll('.static-btn').forEach(button => {
             button.disabled = disabled;
-            if (disabled) {
-                button.classList.add('disabled');
-            } else {
-                button.classList.remove('disabled');
-            }
+            if (disabled) button.classList.add('disabled'); else button.classList.remove('disabled');
         });
     }
 
-// Aggiungi event listener per i pulsanti statici
+    // Aggiungi event listener per i pulsanti statici
     document.querySelectorAll('.static-btn').forEach(button => {
         button.addEventListener('click', function () {
-            const buttonText = this.querySelector('span').textContent;
+            const say = this.dataset.say;
+            const key = this.dataset.key;
 
             // Invia il testo del pulsante al server
-            showLoading(`Dirigiti alla ${buttonText}`);             // Mostra l'animazione di caricamento temporanea per i pulsanti
+            showLoading(`${say}`);             // Mostra l'animazione di caricamento temporanea per i pulsanti
             fetch('/button-click', {
-                method: 'POST',
-                headers: {
+                method: 'POST', headers: {
                     'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({text: buttonText})
+                }, body: JSON.stringify({key: key, say: say})
             })
                 .then(response => {
                     if (!response.ok) {
@@ -698,18 +634,16 @@ document.addEventListener('DOMContentLoaded', function () {
                             this.classList.remove('button-pressed');
                         }, 300);
 
-                        console.log('Comando inviato:', data.command);
+                        console.log('Key inviata:', key);
+                        console.log('Messaggio inviato:', say);
                         // Imposta un timer per nascondere automaticamente il loading dopo 1 secondi dalla conferma di ricezione
-                        setTimeout(() => {
-                            hideLoading();
-                        }, 1000); // 1 secondi
+                        setTimeout(hideLoading, 1000); // 1 secondi
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    addErrorMessage("Si è verificato un errore durante l'invio del comando.");
+                    addErrorMessage("Si è verificato un errore durante l'invio del comando.", isGui = true);
                 });
         });
     });
-})
-;
+});

@@ -10,6 +10,7 @@
     --recording-color: #ff4d4d;
     --volume-indicator-color: rgba(255, 77, 77, 0.3);
     --error-message-bg: #ffebcc; /* Colore arancione chiaro per i messaggi di errore */
+    --error-message-gui-bg: #fff2c7; /* Colore giallo chiaro per i messaggi di errore del frontend*/
 }
 
 .volume-indicator {
@@ -118,6 +119,13 @@
 .error-message {
     background-color: var(--error-message-bg) !important;
     border-left: 4px solid #ff9800; /* Bordo arancione per evidenziare l'errore */
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.error-message-gui {
+    background-color: var(--error-message-gui-bg) !important;
+    border-left: 4px solid #ecd27c; /* Bordo arancione per evidenziare l'errore */
     white-space: pre-wrap;
     word-break: break-word;
 }
