@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Gestisci gli errori di connessione
     socket.on('connect_error', function (error) {
         console.error('Connection error:', error);
-        addErrorMessage('Errore di connessione al server. Riprova più tardi.', isGui = true);
+        addErrorMessage('Errore di connessione al backend python. Riprova più tardi.', isGui = true);
         hideLoading();
 
         // Tenta di riconnettersi automaticamente dopo un breve ritardo

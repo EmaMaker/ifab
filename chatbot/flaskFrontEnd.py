@@ -1,4 +1,3 @@
-import shutil
 import threading
 import time
 from typing import Callable
@@ -10,6 +9,7 @@ from flask_socketio import SocketIO
 # Importa la classe IfabChatWebSocket dal ifabChatWebSocket.py
 from ifabChatWebSocket import IfabChatWebSocket
 from pyLib import AudioPlayer as ap
+from pyLib import WhisperListener as wl
 from pyLib.text_utils import clean_markdown_for_tts
 from pyLib.util import *
 
@@ -262,7 +262,7 @@ def create_app(url: str, auth: str,
 
             # Invia il messaggio audio al bot in un thread separato per non bloccare la risposta HTTP
             def send_audio_thread(audio_path, message_id):
-                stt_audio_text = stt_fun(audio_path=audio_path)
+                stt_audio_text = stt_fun(audio_path)
                 if stt_audio_text:
                     messageBox("Backend audio STT", f"Trascrizione audio: {stt_audio_text}", StyleBox.Light)
                     backEnd_msg2UI(stt_audio_text, message_id=message_id)  # Invia messaggio trascritto al frontend
@@ -325,26 +325,36 @@ def create_app(url: str, auth: str,
     return app, socketio, chat_client
 
 
+""" Utility function for Argvparser"""
+
+
+def flaskFrontEnd_argsAdd(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
+    flaskFrontEndParser = parser.add_argument_group("Flask WebSocket server")
+    flaskFrontEndParser.add_argument('--host', type=str, default='0.0.0.0', help="Host del server [default '%(default)s']")
+    flaskFrontEndParser.add_argument('--port', type=int, default=8000, help="Porta del server [default '%(default)s']")
+    return flaskFrontEndParser
+
+
+def flaskFrontEnd_useArgs(args: argparse.Namespace) -> tuple[str, int]:
+    return args.host, args.port
 
 
 if __name__ == '__main__':
     def newSettpointMock(key):
         print(f"Nuovo setpoint per il robot: '{key}'")
 
-    import argparse
 
-    herePath = os.path.join(os.path.dirname(__file__))
-    parser = argparse.ArgumentParser(description='Avvia il server Flask con SocketIO')
-    parser.add_argument('--host', type=str, default='0.0.0.0', help="Host del server [default '%(default)s']")
-    parser.add_argument('--port', type=int, default=8000, help="Porta del server [default '%(default)s']")
-    parser.add_argument("--model", type=str, help="Path to the Piper-TTS model [default '%(default)s']",
-                        default=os.path.relpath(os.path.join(herePath, "tts-model", "it_IT-paola-medium.onnx")))
+    parser = TreeParser(formatter_class=formatHelp, description='Avvia il server Flask con SocketIO')
+    flaskFrontEnd_argsAdd(parser)  # Aggiungi gli argomenti per il server Flask
+    ap.audioPlayer_argsAdd(parser)  # Aggiungi gli argomenti per l'AudioPlayer
+    wl.whisperListener_argsAdd(parser)  # Aggiungi gli argomenti per il WhisperListener
     args = parser.parse_args()
 
     # Inizializza TTS
-    print(f"Caricamento del modello TTS da: {args.model}")
-    player = ap.AudioPlayer(args.model)
-    print("Modello TTS caricato con successo")
+    player = ap.audioPlayer_useArgs(args)
+    listener = wl.whisperListener_useArgs(args)
+    host, port = flaskFrontEnd_useArgs(args)
+
     # Inizializza il client WebSocket per la comunicazione con il bot
     # Token Bot Ema:
     # url = "https://europe.directline.botframework.com/v3/directline/conversations"
@@ -366,7 +376,10 @@ if __name__ == '__main__':
         {"text": "Plotter", "img_path": "web-client/images/info.jpg", "say": "Sto andando dal Plotter", "key": "plotter"}
     ]
     # Crea l'app Flask e SocketIO con tutte le callback e le informazioni del progetto
-    app, socketio, chat_client = create_app(url, auth, zone_lavoro, macchinari, ttsFun=player.play_text, goBotFun=newSettpointMock)
+    app, socketio, chat_client = create_app(url, auth, zone_lavoro, macchinari,
+                                            ttsFun=player.play_text, sttFun=listener.transcribeText,
+                                            goBotFun=newSettpointMock)
 
     # Avvia il server Flask con SocketIO
-    socketio.run(app, host=args.host, port=args.port, debug=True, allow_unsafe_werkzeug=True)  # Avvia il server Flask con SocketIO
+    flaskFrontEnd_useArgs(args)
+    socketio.run(app, host=host, port=port, debug=True, allow_unsafe_werkzeug=True)  # Avvia il server Flask con SocketIO

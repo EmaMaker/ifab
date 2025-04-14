@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import argparse
+import os
 import queue
 import threading
 import wave
@@ -74,3 +76,21 @@ def open_wave(wave_file):
     with wave.open(wave_file, 'rb') as wf:
         wav_data = wf.readframes(wf.getnframes())
     return wav_data
+
+
+""" Utility function for Argvparser"""
+
+
+def audioPlayer_argsAdd(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
+    audioPlayerParser = parser.add_argument_group("Audio Player for TTS")
+    audioLibPath = os.path.join(os.path.dirname(__file__))
+    audioPlayerParser.add_argument("--tts_model", type=str, help="Path to the Piper-TTS voice model '*.onnx' [default '%(default)s']",
+                        default=os.path.relpath(os.path.join(audioLibPath, "../tts-model", "it_IT-paola-medium.onnx")))
+    return audioPlayerParser
+
+
+def audioPlayer_useArgs(args: argparse.Namespace) -> AudioPlayer:
+    print(f"Caricamento del modello TTS da: {args.tts_model}")
+    player = AudioPlayer(args.tts_model)
+    print("└─▶ Modello TTS caricato con successo")
+    return player
