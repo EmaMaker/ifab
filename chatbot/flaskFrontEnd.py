@@ -325,7 +325,12 @@ def create_app(url: str, auth: str,
     return app, socketio, chat_client
 
 
+
+
 if __name__ == '__main__':
+    def newSettpointMock(key):
+        print(f"Nuovo setpoint per il robot: '{key}'")
+
     import argparse
 
     herePath = os.path.join(os.path.dirname(__file__))
@@ -360,7 +365,8 @@ if __name__ == '__main__':
         {"text": "CNC", "img_path": "web-client/images/music.jpg", "say": "Mi dirigo verso la CNC", "key": "cnc"},
         {"text": "Plotter", "img_path": "web-client/images/info.jpg", "say": "Sto andando dal Plotter", "key": "plotter"}
     ]
-    app, socketio, chat_client = create_app(url, auth, zone_lavoro, macchinari, ttsFun=player.play_text)  # Crea l'app Flask e SocketIO
+    # Crea l'app Flask e SocketIO con tutte le callback e le informazioni del progetto
+    app, socketio, chat_client = create_app(url, auth, zone_lavoro, macchinari, ttsFun=player.play_text, goBotFun=newSettpointMock)
 
     # Avvia il server Flask con SocketIO
     socketio.run(app, host=args.host, port=args.port, debug=True, allow_unsafe_werkzeug=True)  # Avvia il server Flask con SocketIO
