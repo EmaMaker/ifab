@@ -11,15 +11,17 @@ _whisper_instance = None
 _whisper_lock = threading.Lock()
 
 
-def get_available_gpu():
+def get_available_gpu() -> tuple[str, int]:
     """Verifica le GPU disponibili e restituisce l'indice della GPU con più memoria disponibile"""
     if not torch.cuda.is_available():
-        return "cpu"
+        print("ATTENZIONE: GPU non disponibile, utilizzo CPU")
+        return "cpu" , 0
     
     # Ottieni il numero di GPU disponibili
     gpu_count = torch.cuda.device_count()
     if gpu_count == 1:
-        return "cuda:0"
+        print("ATTENZIONE: Solo una GPU disponibile, utilizzo GPU 0")
+        return "cuda", 0
     
     # Trova la GPU con più memoria disponibile
     max_free_memory = 0
@@ -39,7 +41,7 @@ def get_available_gpu():
             max_free_memory = free_memory
             best_gpu_idx = gpu_idx
     
-    return f"cuda:{best_gpu_idx}"
+    return "cuda", best_gpu_idx
 
 
 class WhisperListener():
@@ -50,16 +52,18 @@ class WhisperListener():
         
         # Gestione della selezione della GPU
         if device == 'auto':
-            self.device = get_available_gpu()
+            self.device, self.gpu_idx = get_available_gpu()
         elif device == 'cuda' and gpu_idx is not None:
             # Verifica che l'indice GPU specificato sia valido
             if gpu_idx >= 0 and gpu_idx < torch.cuda.device_count():
-                self.device = f"cuda:{gpu_idx}"
+                self.device = "cuda"
+                self.gpu_idx = gpu_idx
             else:
                 print(f"ATTENZIONE: Indice GPU {gpu_idx} non valido. Utilizzo della GPU con più memoria disponibile.")
-                self.device = get_available_gpu()
+                self.device, self.gpu_idx = get_available_gpu()
         else:
             self.device = device
+            self.gpu_idx = gpu_idx
         
         self.compute_type = compute_type  # change to "int8" if low on GPU mem (may reduce accuracy)
         self.batch_size = batch_size  # reduce if low on GPU mem
@@ -69,7 +73,7 @@ class WhisperListener():
         with _whisper_lock:
             if _whisper_instance is None:
                 print(f"Carico/Scarico il modello '{self.model}' in '{self.device}' con '{self.compute_type}'")
-                _whisper_instance = whisperx.load_model(self.model, self.device, compute_type=self.compute_type, threads=4, language=self.language)
+                _whisper_instance = whisperx.load_model(self.model, self.device, self.gpu_idx, compute_type=self.compute_type, threads=4, language=self.language)
                 print(f"└─▶ Caricamento del modello completato")
             else:
                 print(f"└─▶ Utilizzo modello STT già caricato in memoria")
