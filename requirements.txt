@@ -44,3 +44,4 @@ urllib3
 websocket-client
 Werkzeug
 wsproto
+whisperx

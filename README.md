@@ -1,5 +1,12 @@
 # IFAB Chatbot
 
+> **IMPORTANTE**: Prima di utilizzare questo progetto, è necessario eseguire lo script `setup.sh` per installare o attivare tutte le dipendenze necessarie. Lo script si occupa automaticamente di rilevare il sistema operativo, installare le dipendenze di sistema, creare l'ambiente virtuale Python e configurare correttamente le librerie. Solo dopo aver eseguito questo passaggio è possibile avviare con tranquillità gli script del totem.
+>
+> ```bash
+> # Eseguire questo comando prima di ogni utilizzo
+> ./setup.sh
+> ```
+
 Questo progetto implementa un sistema di chatbot interattivo per IFAB, composto da diversi sottosistemi tra cui un'interfaccia web con supporto per sintesi vocale (TTS) e riconoscimento vocale (STT), un sistema di gestione delle telecamere e componenti robotici.
 
 ## Struttura del Progetto
@@ -63,6 +70,48 @@ Il progetto utilizza le seguenti librerie Python principali:
 - **OpenCV (opencv-python)**: Elaborazione delle immagini e gestione delle telecamere
 - **NumPy, Matplotlib**: Elaborazione numerica e visualizzazione
 - **SoundDevice**: Riproduzione audio
+
+### Configurazione per il riconoscimento vocale (WhisperX)
+
+Il sistema di riconoscimento vocale (STT) utilizza WhisperX, che richiede alcune configurazioni specifiche in base al sistema operativo:
+
+#### Arch Linux (KDE)
+
+Su Arch Linux, è necessario installare le seguenti dipendenze:
+
+```bash
+# Installazione delle dipendenze necessarie
+sudo pacman -S ffmpeg cuda cudnn nvtop nvidia-drivers
+```
+
+Esempio di utilizzo:
+
+```bash
+whisperx --model large-v3 --compute_type float32 --language it chatbot/demo-wav/audio_20250411-143626.wav
+```
+
+#### Ubuntu
+
+Su Ubuntu, l'installazione è ancora in fase di sviluppo (work in progress). Sono stati riscontrati alcuni problemi specifici che stiamo cercando di risolvere. È necessario configurare correttamente le librerie NVIDIA:
+
+```bash
+# Installazione delle dipendenze
+sudo apt install ffmpeg
+
+# Configurazione delle librerie NVIDIA (potrebbe richiedere adattamenti)
+export LD_LIBRARY_PATH="$VIRTUAL_ENV/lib/python3.10/site-packages/nvidia/cudnn/lib"
+```
+
+#### macOS
+
+Su macOS, il sistema funziona correttamente utilizzando Homebrew per installare le dipendenze, ma senza supporto NVIDIA. In questo caso, WhisperX utilizzerà automaticamente la CPU:
+
+```bash
+# Installazione delle dipendenze con Homebrew
+brew install ffmpeg
+```
+
+Il modulo `WhisperListener.py` è in grado di rilevare automaticamente se la GPU non è disponibile e passare alla CPU.
 
 ### Dipendenze NPM
 
