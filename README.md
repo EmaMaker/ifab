@@ -4,8 +4,10 @@
 >
 > ```bash
 > # Eseguire questo comando prima di ogni utilizzo
-> ./setup.sh
+> source ./setup.sh
 > ```
+>
+> **NOTA**: È fondamentale utilizzare il comando `source` per eseguire lo script, in modo che l'ambiente virtuale venga attivato nella sessione corrente del terminale. Utilizzando `./setup.sh` l'ambiente virtuale verrebbe attivato solo all'interno dello script, senza effetto sul terminale corrente.
 
 Questo progetto implementa un sistema di chatbot interattivo per IFAB, composto da diversi sottosistemi tra cui un'interfaccia web con supporto per sintesi vocale (TTS) e riconoscimento vocale (STT), un sistema di gestione delle telecamere e componenti robotici.
 
@@ -21,7 +23,7 @@ Il progetto è organizzato nelle seguenti directory principali:
 - `Camera-SubSystem/`: Sistema di gestione delle telecamere
 - `robot/`: Componenti per il controllo robotico
 
-## Requisiti
+## Requisiti da installare a mano (se setup.sh non viene eseguito)
 
 ### Ambiente Python
 
@@ -113,17 +115,6 @@ brew install ffmpeg
 
 Il modulo `WhisperListener.py` è in grado di rilevare automaticamente se la GPU non è disponibile e passare alla CPU.
 
-### Dipendenze NPM
-
-Il progetto utilizza anche alcune librerie JavaScript installate tramite npm:
-
-- **marked**: Libreria per il parsing e la conversione di Markdown in HTML, utilizzata probabilmente per formattare i messaggi del chatbot.
-
-Per installare le dipendenze npm:
-
-```bash
-npm install
-```
 
 ## Avvio della demo Chatbot Web
 

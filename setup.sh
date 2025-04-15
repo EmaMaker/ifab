@@ -54,8 +54,8 @@ create_venv() {
     fi
     
     if [[ $? -ne 0 ]]; then
-        echo "ERRORE: Impossibile creare l'ambiente virtuale. Assicurati di avere Python 3.10 installato."
-        exit 1
+        echo "Setup interrotto nella fase di creazione dell'ambiente virtuale. Assicurati di avere Python 3.10 installato"
+        return 1
     fi
 }
 
@@ -66,7 +66,8 @@ activate_venv() {
     
     if [[ $? -ne 0 ]]; then
         echo "ERRORE: Impossibile attivare l'ambiente virtuale."
-        exit 1
+        echo "Setup interrotto nella fase di attivazione dell'ambiente virtuale."
+        return 1
     fi
 }
 
@@ -90,7 +91,8 @@ install_python() {
             sudo apt install python3.10 python3.10-venv python3.10-dev -y
         else
             echo "AVVISO: Sistema operativo non riconosciuto. Installare Python 3.10 manualmente."
-            exit 1
+            echo "Setup interrotto nella fase di installazione di Python 3.10."
+            return 1
         fi
     else
         echo "Python 3.10 è già installato."
@@ -110,7 +112,8 @@ install_system_dependencies() {
             echo "Homebrew non è installato."
             echo "Per installare le dipendenze di sistema su macOS, si consiglia di installare Homebrew:"
             echo "  /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
-            exit 1
+            echo "Setup interrotto nella fase di installazione delle dipendenze di sistema."
+            return 1
         fi
         echo "Installazione di ffmpeg tramite Homebrew..."
         brew install ffmpeg
@@ -140,7 +143,7 @@ install_system_dependencies() {
 }
 
 # Funzione per installare le dipendenze Python
-install_dependencies() {
+install_pip_dependencies() {
     echo "Installazione delle dipendenze Python..."
     
     # Installa le dipendenze Python (indipendente dal sistema operativo)
@@ -158,38 +161,58 @@ install_dependencies() {
     
     if [[ $? -ne 0 ]]; then
         echo "ERRORE: Impossibile installare le dipendenze."
-        exit 1
+        echo "Setup interrotto nella fase di installazione delle dipendenze Python."
+        return 1
     fi
+}
+
+# Funzione per verificare gli errori e interrompere l'esecuzione se necessario
+check_error() {
+    local exit_code=$1
+    local error_message=$2
     
-    if [[ $? -ne 0 ]]; then
-        echo "ERRORE: Impossibile installare le dipendenze."
-        exit 1
+    if [[ $exit_code -ne 0 ]]; then
+        echo "ERRORE: $error_message"
+        echo "Setup interrotto."
+        return 1
     fi
+    return 0
 }
 
 # Funzione principale
 main() {
     echo "=== Setup IFAB Chatbot ==="
     
-    # Installa Python 3.10 se necessario
-    install_python
-    
-    # Installa le dipendenze di sistema
-    install_system_dependencies
-    
     # Verifica se l'ambiente virtuale esiste
     if check_venv; then
         echo "Ambiente virtuale esistente trovato."
         activate_venv
+        check_error $? "Impossibile attivare l'ambiente virtuale esistente." || return 1
     else
         echo "Ambiente virtuale non trovato."
+        # Installa Python 3.10 se necessario
+        install_python
+        check_error $? "Installazione di Python 3.10 fallita." || return 1
+        
+        # Installa le dipendenze di sistema
+        install_system_dependencies
+        check_error $? "Installazione delle dipendenze di sistema fallita." || return 1
+        
         create_venv
+        check_error $? "Creazione dell'ambiente virtuale fallita." || return 1
+        
         activate_venv
-        install_dependencies
+        check_error $? "Attivazione dell'ambiente virtuale fallita." || return 1
+        
+        install_pip_dependencies
+        check_error $? "Installazione delle dipendenze Python fallita." || return 1
     fi
     
     echo "Setup completato. L'ambiente virtuale è attivo."
-    echo "Per avviare il chatbot, esegui: python chatbot/flaskFrontEnd.py"
+    echo ""
+    echo "Per avviare il chatbot, esegui:"
+    echo "└─▶ $ python chatbot/flaskFrontEnd.py"
+    return 0
 }
 
 # Esegui la funzione principale
