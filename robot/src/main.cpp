@@ -49,7 +49,7 @@ void loop() {
 char packetBuffer[255];
 void wifi_receive(){
   // receive robot position, target setpoints from Wifi (UDP)
-  // Formatted in JSON, dictionary with keys "setpoint", "target", "target2"
+  // Formatted in JSON, dictionary with keys "robot", "target"
   // Each value is a 3x1 array of floats, in order X,Y,Theta of the point
   int packetSize = udp.parsePacket();
   if(packetSize){
@@ -58,9 +58,7 @@ void wifi_receive(){
     Serial.println(packetBuffer);
 
     //JSON parsing
-
     JsonDocument doc;       // Create a JSON document
-
     DeserializationError error = deserializeJson(doc, packetBuffer);
 
     if (error) {
@@ -71,21 +69,20 @@ void wifi_receive(){
 
     // Extract the JSON objects
 
-    float setpoint_x = doc["setpoint"][0];
-    float setpoint_y = doc["setpoint"][1];
-    float setpoint_theta = doc["setpoint"][2];
+    float robot_x = doc["robot"][0];
+    float robot_y = doc["robot"][1];
+    float robot_theta = doc["robot"][2];
 
     float target_x = doc["target"][0];
     float target_y = doc["target"][1];
     float target_theta = doc["target"][2];
 
-    float target2_x = doc["target2"][0];
-    float target2_y = doc["target2"][1];
-    float target2_theta = doc["target2"][2];
-
-    Serial.println(setpoint_x);
-    Serial.println(setpoint_y);
-    Serial.println(setpoint_theta);
+    Serial.println(robot_x);
+    Serial.println(robot_y);
+    Serial.println(robot_theta);
+    Serial.println(target_x);
+    Serial.println(target_y);
+    Serial.println(target_theta);
   }
 }
 

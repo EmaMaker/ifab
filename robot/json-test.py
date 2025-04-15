@@ -6,7 +6,7 @@ CLIENT_1 = "ifab.local"
 CLIENT_PORT = 4242
 MESSAGE = b"""
 {
-    "setpoint": [
+    "robot": [
         1.1,
         2.2,
         3.3
@@ -15,11 +15,6 @@ MESSAGE = b"""
         4.4,
         5.5,
         6.6
-    ],
-    "target2": [
-        7.7,
-        8.8,
-        9.9
     ]
 }
 """
