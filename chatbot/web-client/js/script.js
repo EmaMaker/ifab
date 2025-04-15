@@ -114,6 +114,17 @@ document.addEventListener('DOMContentLoaded', function () {
         setTimeout(scrollToBottom, 50);
     }
 
+    // Funzione dedicata per aggiungere messaggi di errore
+    function addErrorMessage(text, isGui) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message';
+        if (isGui) messageDiv.className += ' error-message-gui'; else messageDiv.className += ' error-message';
+
+        // Utilizziamo marked per convertire il testo Markdown in HTML
+        messageDiv.innerHTML = marked.parse(text);
+        messageContainer.appendChild(messageDiv);
+    }
+
     // Add a bot message to the chat with Markdown support
     function addBotMessage(text) {
         const messageDiv = document.createElement('div');
@@ -141,17 +152,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Forza lo scroll dopo un breve ritardo per assicurarsi che il contenuto sia stato renderizzato
         setTimeout(scrollToBottom, 50);
-    }
-
-    // Funzione dedicata per aggiungere messaggi di errore
-    function addErrorMessage(text, isGui) {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = 'message';
-        if (isGui) messageDiv.className += ' error-message-gui'; else messageDiv.className += ' error-message';
-
-        // Utilizziamo marked per convertire il testo Markdown in HTML
-        messageDiv.innerHTML = marked.parse(text);
-        messageContainer.appendChild(messageDiv);
     }
 
     // Add a user audio message to the chat
@@ -349,7 +349,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Check if the browser supports MediaRecorder
         if (!navigator.mediaDevices || !window.MediaRecorder) {
-            addBotMessage('Il tuo browser non supporta la registrazione audio.');
+            addErrorMessage('Il tuo browser non supporta la registrazione audio.\nPotrebbe essere una misura di sicurezza poichè connessione non sicura.\nModificare i permessi del browser o connettersi in localhost.', isGui = true);
             return;
         }
 
@@ -357,7 +357,7 @@ document.addEventListener('DOMContentLoaded', function () {
             // Verifica più accurata dei permessi del microfono
             const permissionState = await checkMicrophonePermission();
             if (permissionState === 'denied') {
-                addBotMessage('L\'accesso al microfono è stato negato. Per abilitarlo:\n1. Clicca sull\'icona del lucchetto nella barra degli indirizzi\n2. Trova "Microfono" nelle impostazioni\n3. Seleziona "Consenti"');
+                addErrorMessage('L\'accesso al microfono è stato negato. Per abilitarlo:\n1. Clicca sull\'icona del lucchetto nella barra degli indirizzi\n2. Trova "Microfono" nelle impostazioni\n3. Seleziona "Consenti"', isGui = true);
                 return;
             }
 
