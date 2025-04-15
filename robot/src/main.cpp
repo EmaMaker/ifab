@@ -43,7 +43,6 @@ void loop() {
   ArduinoOTA.handle();
   wifi_receive(); 
   update_position_ctrl();
-  set
 }
 
 
@@ -62,7 +61,7 @@ void wifi_receive(){
 
     JsonDocument doc;       // Create a JSON document
 
-    DeserializationError error = deserializeJson(doc, json);
+    DeserializationError error = deserializeJson(doc, packetBuffer);
 
     if (error) {
       Serial.print(F("deserializeJson() failed: "));
@@ -84,7 +83,9 @@ void wifi_receive(){
     float target2_y = doc["target2"][1];
     float target2_theta = doc["target2"][2];
 
-
+    Serial.println(setpoint_x);
+    Serial.println(setpoint_y);
+    Serial.println(setpoint_theta);
   }
 }
 
