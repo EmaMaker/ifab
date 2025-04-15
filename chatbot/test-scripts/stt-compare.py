@@ -2,6 +2,9 @@
 # PYTHON_ARGCOMPLETE_OK
 # -*- coding: utf-8 -*-
 
+import torch
+torch.backends.cuda.matmul.allow_tf32 = True
+torch.backends.cudnn.allow_tf32 = True
 
 import argparse
 import time
@@ -17,6 +20,9 @@ import os
 import certifi
 os.environ['SSL_CERT_FILE'] = certifi.where()
 
+
+
+
 # Aggiungi il percorso relativo al sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
 
@@ -31,15 +37,10 @@ if __name__ == '__main__':
     argcomplete.autocomplete(parser)
     args = parser.parse_args()
 
-    device = "cpu"
+    device = "cuda"
     audio_file = args.wav
     batch_size = 16  # reduce if low on GPU mem
     compute_type = "float32"  # change to "int8" if low on GPU mem (may reduce accuracy)
-
-
-    # save model to local path (optional)
-    model_dir = "/Users/ea_enel/Documents/00_My/ifab-chatbot/chatbot/demo-wav"
-
 
     # delete model if low on GPU resources
     # import gc; gc.collect(); torch.cuda.empty_cache(); del model
