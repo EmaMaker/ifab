@@ -61,6 +61,10 @@ class WhisperListener():
             else:
                 print(f"ATTENZIONE: Indice GPU {gpu_idx} non valido. Utilizzo della GPU con più memoria disponibile.")
                 self.device, self.gpu_idx = get_available_gpu()
+        elif device == 'cpu':
+            # Per la CPU, device_index deve essere sempre 0
+            self.device = device
+            self.gpu_idx = 0
         else:
             self.device = device
             self.gpu_idx = gpu_idx
