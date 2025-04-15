@@ -3,6 +3,9 @@
 # Script di setup per IFAB Chatbot
 # Compatibile con bash e zsh
 
+# Opzioni di default
+FORCE_SETUP=false
+
 # Funzione per rilevare il sistema operativo
 detect_os() {
     if [[ "$(uname)" == "Darwin" ]]; then
@@ -179,17 +182,50 @@ check_error() {
     return 0
 }
 
+# Funzione per mostrare l'help
+show_help() {
+    echo "Utilizzo: $0 [opzioni]"
+    echo ""
+    echo "Opzioni:"
+    echo "  -f, --force    Forza la riesecuzione di tutti gli step di setup, anche se l'ambiente virtuale esiste già"
+    echo "  -h, --help     Mostra questo messaggio di aiuto"
+}
+
 # Funzione principale
 main() {
+    # Parsing dei parametri
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -f|--force)
+                FORCE_SETUP=true
+                shift
+                ;;
+            -h|--help)
+                show_help
+                return 0
+                ;;
+            *)
+                echo "Opzione non riconosciuta: $1"
+                show_help
+                return 1
+                ;;
+        esac
+    done
+
     echo "=== Setup IFAB Chatbot ==="
     
     # Verifica se l'ambiente virtuale esiste
-    if check_venv; then
+    if check_venv && [[ "$FORCE_SETUP" == "false" ]]; then
         echo "Ambiente virtuale esistente trovato."
         activate_venv
         check_error $? "Impossibile attivare l'ambiente virtuale esistente." || return 1
     else
-        echo "Ambiente virtuale non trovato."
+        if [[ "$FORCE_SETUP" == "false" ]]; then
+            echo "Ambiente virtuale non trovato."
+        else
+            echo "Ambiente virtuale esistente trovato, ma l'opzione --force è attiva."
+            echo "Procedendo con la reinstallazione completa..."
+        fi
         # Installa Python 3.10 se necessario
         install_python
         check_error $? "Installazione di Python 3.10 fallita." || return 1
@@ -206,6 +242,9 @@ main() {
         
         install_pip_dependencies
         check_error $? "Installazione delle dipendenze Python fallita." || return 1
+
+        echo "Setup completato. Si suggeriesce di attivare anche l'argcomplete globale (avrà effetto dal prossimo riavvio):"
+        echo "└─▶ $ activate-global-python-argcomplete"
     fi
     
     echo "Setup completato. L'ambiente virtuale è attivo."
@@ -215,5 +254,5 @@ main() {
     return 0
 }
 
-# Esegui la funzione principale
-main
+# Esegui la funzione principale con tutti i parametri passati allo script
+main "$@"
