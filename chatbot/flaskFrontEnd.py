@@ -381,5 +381,4 @@ if __name__ == '__main__':
                                             goBotFun=newSettpointMock)
 
     # Avvia il server Flask con SocketIO
-    flaskFrontEnd_useArgs(args)
-    socketio.run(app, host=host, port=port, debug=True, allow_unsafe_werkzeug=True)  # Avvia il server Flask con SocketIO
+    socketio.run(app, host=host, port=port, debug=True, allow_unsafe_werkzeug=True, use_reloader=False)  # Avvia il server Flask con SocketIO disabilitando il riavvio automatico

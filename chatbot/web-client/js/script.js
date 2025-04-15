@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let recordingMode = 'push'; // Nuova variabile per la modalità di registrazione: 'toggle' o 'push'
     let lastAudioPath = null; // Variabile per tenere traccia dell'ultimo file audio registrato
     let audioMessages = {}; // Oggetto per memorizzare i percorsi audio associati a ciascun messaggio
+    let microphoneStream = null; // Variabile per tenere traccia dello stream del microfono
 
 
     // Imposta la visibilità iniziale del pulsante
@@ -365,6 +366,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // Richiedi l'accesso al microfono
             const stream = await navigator.mediaDevices.getUserMedia({audio: true});
+            // Salva lo stream per poterlo fermare correttamente in seguito
+            microphoneStream = stream;
 
             isRecording = true;
             recordButton.classList.add('recording');
@@ -512,6 +515,12 @@ document.addEventListener('DOMContentLoaded', function () {
         if (mediaRecorder && mediaRecorder.state === 'recording') {
             mediaRecorder.stop();
         }
+        
+        // Ferma lo stream del microfono per rimuovere l'indicatore di registrazione
+        if (microphoneStream) {
+            microphoneStream.getTracks().forEach(track => track.stop());
+            microphoneStream = null;
+        }
 
         cleanupAudioResources();
     }
@@ -539,6 +548,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         analyser = null;
+        mediaRecorder = null;
     }
 
     // Funzione per ridimensionare automaticamente la textarea

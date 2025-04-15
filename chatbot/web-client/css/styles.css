@@ -265,8 +265,14 @@ body {
     justify-content: flex-start;
 }
 
+.header-buttons {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+}
+
 .about-us-button {
-    padding: 8px 15px 8px 8px;
+    padding: 8px 15px;
     background-color: var(--primary-color);
     color: white;
     border: none;
@@ -277,10 +283,14 @@ body {
     text-decoration: none;
     display: inline-block;
     text-align: center;
-    margin-left: auto;
-    margin-right: 2%;
+    margin-right: 10px;
     position: relative;
+}
+
+/* Stile a freccia solo per il pulsante 'Chi siamo' */
+.about-us-button[href="/about"] {
     clip-path: polygon(0 0, 85% 0, 100% 50%, 85% 100%, 0 100%);
+    padding-right: 20px;
 }
 
 .about-us-button:hover {

@@ -10,10 +10,26 @@ import numpy as np
 import sounddevice as sd
 from piper.voice import PiperVoice
 
+# Singleton per il modello TTS
+_tts_instance = None
+_tts_lock = threading.Lock()
+
 
 class AudioPlayer:
     def __init__(self, voice_model_path):
-        self.voice = PiperVoice.load(voice_model_path)
+        global _tts_instance
+        
+        # Implementazione del pattern Singleton per evitare ricaricamenti multipli del modello TTS
+        with _tts_lock:
+            if _tts_instance is None:
+                print(f"Caricamento del modello TTS da: {voice_model_path}")
+                _tts_instance = PiperVoice.load(voice_model_path)
+                print("└─▶ Modello TTS caricato con successo")
+            else:
+                print("└─▶ Utilizzo modello TTS già caricato in memoria")
+                
+            self.voice = _tts_instance
+            
         self.stream = None
         self.queue = queue.Queue()
         self.thread = threading.Thread(target=self._play_audio)
@@ -90,7 +106,5 @@ def audioPlayer_argsAdd(parser: argparse.ArgumentParser) -> argparse.ArgumentPar
 
 
 def audioPlayer_useArgs(args: argparse.Namespace) -> AudioPlayer:
-    print(f"Caricamento del modello TTS da: {args.tts_model}")
     player = AudioPlayer(args.tts_model)
-    print("└─▶ Modello TTS caricato con successo")
     return player
