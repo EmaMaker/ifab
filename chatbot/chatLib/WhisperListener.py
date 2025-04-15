@@ -1,20 +1,34 @@
 import argparse
 import os
+import threading
 
 import whisperx
 
 
+# Singleton per il modello WhisperX
+_whisper_instance = None
+_whisper_lock = threading.Lock()
+
 class WhisperListener():
     def __init__(self, model='large-v3', device='cuda', compute_type='float32', batch_size=16, language='it'):
+        global _whisper_instance
+        
         self.model = model
         self.device = device
         self.compute_type = compute_type  # change to "int8" if low on GPU mem (may reduce accuracy)
         self.batch_size = batch_size  # reduce if low on GPU mem
         self.language = language
-        # TODO: capire come mostrare l'eventuale download, come fa lo script originale
-        print(f"Carico/Scarico il modello '{self.model}' in '{self.device}' con '{self.compute_type}'")
-        self.model_obj = whisperx.load_model(self.model, self.device, compute_type=self.compute_type, threads=4, language=self.language)
-        print(f"└─▶ Caricamento del modello completato")
+        
+        # Implementazione del pattern Singleton per evitare ricaricamenti multipli del modello
+        with _whisper_lock:
+            if _whisper_instance is None:
+                print(f"Carico/Scarico il modello '{self.model}' in '{self.device}' con '{self.compute_type}'")
+                _whisper_instance = whisperx.load_model(self.model, self.device, compute_type=self.compute_type, threads=4, language=self.language)
+                print(f"└─▶ Caricamento del modello completato")
+            else:
+                print(f"└─▶ Utilizzo modello STT già caricato in memoria")
+            
+            self.model_obj = _whisper_instance
 
     def transcribe(self, audio_file) -> dict:
         if not os.path.exists(audio_file):
