@@ -18,6 +18,8 @@ float s{0.0};
 float s_dot{0.0};
 float traj_start_time{0.0};
 
+double angspd[] = {0.0, 0.0};
+
 QuickPID ctrl_x(&pos_x, &output_x, &setpoint_x, KP_X, KI_X, KD_X, ctrl_x.pMode::pOnError, ctrl_x.dMode::dOnMeas, ctrl_x.iAwMode::iAwCondition, ctrl_x.Action::direct);
 QuickPID ctrl_y(&pos_y, &output_y, &setpoint_y, KP_Y, KI_Y, KD_Y, ctrl_y.pMode::pOnError, ctrl_y.dMode::dOnMeas, ctrl_y.iAwMode::iAwCondition, ctrl_y.Action::direct);
 
@@ -38,11 +40,18 @@ void init_position_ctrl(void){
     position.tk = timer_position;
 }
 
-void update_position_ctrl(void){
+void update_position_ctrl(){
   update_wheels();
+  controller_position(angspd);
 
+  set_left_wheel_angspd(angspd[1]);
+  set_right_wheel_angspd(angspd[0]);
+}
+
+void controller_position(double output[]){
   unsigned long t = micros();
   float tf = t*1e-6;
+
   if( t - timer_position >= sample_time_position_micros) // 2 times the sampling time of encoders.  Good enough as far as mister Nyquist is concerned
   {
     // odometric localization with encoders
@@ -53,14 +62,6 @@ void update_position_ctrl(void){
     // position feedback with "off center" points
     pos_x = position.x + B_FROM_CENTER*cos(position.theta);
     pos_y = position.y + B_FROM_CENTER*sin(position.theta);
-
-    ctrl_x.Compute();
-    ctrl_y.Compute();
-
-    constexpr double d = ODO_DISTANCE_BETWEEN_WHEELS;
-    constexpr double r = ODO_WHEEL_RADIUS;
-    constexpr double b = B_FROM_CENTER;
-    constexpr double det = 2*b*r;
 
     // Time-based interpolation factor for bang-coast-bang trajectory
     float dx = position_fin.x - position_init.x;
@@ -105,27 +106,11 @@ void update_position_ctrl(void){
     double output_x_ff = output_x + (position_fin.x - position_init.x)*s_dot;
     double output_y_ff = output_y + (position_fin.y - position_init.y)*s_dot;
 
-    double t_11 = cos(position.theta);
-    double t_12 = sin(position.theta);
-    double t_21 = -sin(position.theta)/b;
-    double t_22 = cos(position.theta)/b;
-
-    double v = t_11 * output_x_ff + t_12*output_y_ff;
-    double w = t_21 * output_x_ff + t_22*output_y_ff;
-    
-    // v = constrain(v, -0.35, 0.35);
-    // w = constrain(w, -0.6, 0.6);
-
-    double w_11 = 1/r;
-    double w_12 = d/(2*r);
-    double w_21 = 1/r;
-    double w_22 = -d/(2*r);
-
-    double wr = w_11*v + w_12*w;
-    double wl = w_21*v + w_22*w;
-
-    set_right_wheel_angspd(wr);
-    set_left_wheel_angspd(wl);
+    double in_t[] = {output_x_ff, output_y_ff};
+    double out_t[] = {0, 0};
+    double out_w[] = {0, 0};
+    decouple_t(out_t, in_t);
+    decouple_w(output, out_t);
 
     timer_position = t;
 
@@ -136,6 +121,36 @@ void update_position_ctrl(void){
     // Serial.print(" | T: ");
     // Serial.println(position.theta);  
   }
+}
+
+void decouple_t(double output[], double input[]){
+    constexpr double d = ODO_DISTANCE_BETWEEN_WHEELS;
+    constexpr double r = ODO_WHEEL_RADIUS;
+    constexpr double b = B_FROM_CENTER;
+    constexpr double det = 2*b*r;
+
+    double t_11 = cos(position.theta);
+    double t_12 = sin(position.theta);
+    double t_21 = -sin(position.theta)/b;
+    double t_22 = cos(position.theta)/b;
+
+    output[0] = t_11 * input[0] + t_12*input[1];
+    output[1] = t_21 * input[0] + t_22*input[1];
+}
+
+void decouple_w(double output[], double input[]){
+  constexpr double d = ODO_DISTANCE_BETWEEN_WHEELS;
+  constexpr double r = ODO_WHEEL_RADIUS;
+  constexpr double b = B_FROM_CENTER;
+  constexpr double det = 2*b*r;
+  double w_11 = 1/r;
+  double w_12 = d/(2*r);
+  double w_21 = 1/r;
+  double w_22 = -d/(2*r);
+
+  output[0] = w_11*input[0] + w_12*input[1];
+  output[1] = w_21*input[0] + w_22*input[1];
+
 }
 
 void set_desired_position(float xg, float yg){
