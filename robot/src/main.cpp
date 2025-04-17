@@ -11,8 +11,8 @@
 
 #define UDP_PORT 4242
 
-const char* ssid = "Radiomarelli";
-const char* password = "Magnadyn3Radiomarell1Philip5@";
+const char* ssid = "FMD";
+const char* password = "Innovation_Phyrtual473";
 bool wifi_connected = false;
 
 void setup_ota();
@@ -36,12 +36,13 @@ void setup() {
   }
 
   init_position_ctrl();
-  set_desired_position(0.66, 0.33);
+  set_desired_position({0,0,0});
 }
 
 void loop() {
   ArduinoOTA.handle();
   wifi_receive(); 
+
   update_position_ctrl();
 }
 
@@ -66,16 +67,15 @@ void wifi_receive(){
       Serial.println(error.c_str());
       return;
     }
-
+ 
     // Extract the JSON objects
-
-    float robot_x = doc["robot"][0];
-    float robot_y = doc["robot"][1];
-    float robot_theta = doc["robot"][2];
-
-    float target_x = doc["target"][0];
-    float target_y = doc["target"][1];
-    float target_theta = doc["target"][2];
+    double robot_x = doc["robot"][0];
+    double robot_y = doc["robot"][1];
+    double robot_theta = doc["robot"][2];
+  
+    double target_x = doc["target"][0];
+    double target_y = doc["target"][1];
+    double target_theta = doc["target"][2];
 
     Serial.println(robot_x);
     Serial.println(robot_y);
@@ -83,6 +83,8 @@ void wifi_receive(){
     Serial.println(target_x);
     Serial.println(target_y);
     Serial.println(target_theta);
+
+    set_desired_position({target_x, target_y, target_theta});
   }
 }
 
