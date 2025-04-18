@@ -10,10 +10,12 @@ FORCE_SETUP=false
 detect_os() {
     if [[ "$(uname)" == "Darwin" ]]; then
         echo "macos"
-    elif [[ -f /etc/arch-release ]]; then
+    elif command -v pacman &> /dev/null; then
         echo "arch"
-    elif [[ -f /etc/lsb-release ]]; then
+    elif command -v apt &> /dev/null || command -v apt-get &> /dev/null; then
         echo "ubuntu"
+    elif command -v dnf &> /dev/null; then
+        echo "redhat"
     else
         echo "unknown"
     fi
@@ -63,9 +65,19 @@ create_venv() {
 }
 
 # Funzione per attivare l'ambiente virtuale
-activate_venv() {
+activate_venv_link_lib() {
     echo "Attivazione dell'ambiente virtuale..."
     source .venv/bin/activate
+
+    # Configura LD_LIBRARY_PATH per le librerie NVIDIA se necessario
+    if check_nvidia_gpu; then
+        CUDNN_PATH="$VIRTUAL_ENV/lib/python3.10/site-packages/nvidia/cudnn/lib"
+        if [[ -d "$CUDNN_PATH" ]]; then
+            export LD_LIBRARY_PATH="$CUDNN_PATH"
+            echo "export LD_LIBRARY_PATH=\"$CUDNN_PATH\"" >> "$VIRTUAL_ENV/bin/activate"
+            echo "Configurato LD_LIBRARY_PATH per le librerie NVIDIA"
+        fi
+    fi
     
     if [[ $? -ne 0 ]]; then
         echo "ERRORE: Impossibile attivare l'ambiente virtuale."
@@ -92,6 +104,9 @@ install_python() {
             sudo add-apt-repository ppa:deadsnakes/ppa -y
             sudo apt update
             sudo apt install python3.10 python3.10-venv python3.10-dev -y
+        elif [[ "$OS" == "redhat" ]]; then
+            echo "Installazione di Python 3.10 su Red Hat/Fedora..."
+            sudo dnf install python3.10 python3.10-devel -y
         else
             echo "AVVISO: Sistema operativo non riconosciuto. Installare Python 3.10 manualmente."
             echo "Setup interrotto nella fase di installazione di Python 3.10."
@@ -105,10 +120,10 @@ install_python() {
 # Funzione per installare le dipendenze di sistema
 install_system_dependencies() {
     echo "Installazione delle dipendenze di sistema..."
-    
+
     OS=$(detect_os)
     HAS_NVIDIA=$(check_nvidia_gpu && echo "true" || echo "false")
-    
+
     if [[ "$OS" == "macos" ]]; then
         # Su macOS, verifica se Homebrew è installato
         if ! command -v brew &> /dev/null; then
@@ -124,7 +139,7 @@ install_system_dependencies() {
         # Su Arch Linux
         echo "Installazione delle dipendenze di sistema su Arch Linux..."
         sudo pacman -S ffmpeg --noconfirm
-        
+
         if [[ "$HAS_NVIDIA" == "true" ]]; then
             echo "Installazione delle dipendenze NVIDIA su Arch Linux..."
             sudo pacman -S cuda cudnn nvtop nvidia-drivers --noconfirm
@@ -134,34 +149,32 @@ install_system_dependencies() {
         echo "Installazione delle dipendenze di sistema su Ubuntu..."
         sudo apt update
         sudo apt install ffmpeg -y
-        
+
         if [[ "$HAS_NVIDIA" == "true" ]]; then
             echo "Installazione delle dipendenze NVIDIA su Ubuntu..."
             sudo apt install nvidia-cuda-toolkit nvidia-cudnn -y
+        fi
+    elif [[ "$OS" == "redhat" ]]; then
+        # Su Red Hat/Fedora
+        echo "Installazione delle dipendenze di sistema su Red Hat/Fedora..."
+        sudo dnf install ffmpeg -y
+
+        if [[ "$HAS_NVIDIA" == "true" ]]; then
+            echo "Installazione delle dipendenze NVIDIA su Red Hat/Fedora..."
+            sudo dnf install cuda cudnn nvtop -y
         fi
     else
         echo "AVVISO: Sistema operativo non riconosciuto. Installare le dipendenze manualmente."
         echo "        ffmpeg, nvidia-cuda-toolkit, nvidia-cudnn, nvtop nvidia-drivers"
     fi
 }
-
 # Funzione per installare le dipendenze Python
 install_pip_dependencies() {
     echo "Installazione delle dipendenze Python..."
     
     # Installa le dipendenze Python (indipendente dal sistema operativo)
     pip install -r requirements.txt
-    
-    # Configura LD_LIBRARY_PATH per le librerie NVIDIA se necessario
-    if check_nvidia_gpu; then
-        CUDNN_PATH="$VIRTUAL_ENV/lib/python3.10/site-packages/nvidia/cudnn/lib"
-        if [[ -d "$CUDNN_PATH" ]]; then
-            export LD_LIBRARY_PATH="$CUDNN_PATH"
-            echo "export LD_LIBRARY_PATH=\"$CUDNN_PATH\"" >> "$VIRTUAL_ENV/bin/activate"
-            echo "Configurato LD_LIBRARY_PATH per le librerie NVIDIA"
-        fi
-    fi
-    
+
     if [[ $? -ne 0 ]]; then
         echo "ERRORE: Impossibile installare le dipendenze."
         echo "Setup interrotto nella fase di installazione delle dipendenze Python."
@@ -213,39 +226,39 @@ main() {
     done
 
     echo "=== Setup IFAB Chatbot ==="
-    
-    # Verifica se l'ambiente virtuale esiste
-    if check_venv && [[ "$FORCE_SETUP" == "false" ]]; then
-        echo "Ambiente virtuale esistente trovato."
-        activate_venv
-        check_error $? "Impossibile attivare l'ambiente virtuale esistente." || return 1
-    else
-        if [[ "$FORCE_SETUP" == "false" ]]; then
+
+    # Verifica se è necessario installare/reinstallare l'ambiente virtuale
+    if ! check_venv || [[ "$FORCE_SETUP" == "true" ]]; then
+        if ! check_venv; then
             echo "Ambiente virtuale non trovato."
         else
             echo "Ambiente virtuale esistente trovato, ma l'opzione --force è attiva."
             echo "Procedendo con la reinstallazione completa..."
         fi
+
         # Installa Python 3.10 se necessario
         install_python
         check_error $? "Installazione di Python 3.10 fallita." || return 1
-        
+
         # Installa le dipendenze di sistema
         install_system_dependencies
         check_error $? "Installazione delle dipendenze di sistema fallita." || return 1
-        
+
         create_venv
         check_error $? "Creazione dell'ambiente virtuale fallita." || return 1
-        
-        activate_venv
-        check_error $? "Attivazione dell'ambiente virtuale fallita." || return 1
-        
+
         install_pip_dependencies
         check_error $? "Installazione delle dipendenze Python fallita." || return 1
 
         echo "Setup completato. Si suggeriesce di attivare anche l'argcomplete globale (avrà effetto dal prossimo riavvio):"
         echo "└─▶ $ activate-global-python-argcomplete"
+    else
+        echo "Ambiente virtuale esistente trovato."
     fi
+
+    # Attiva sempre l'ambiente virtuale alla fine
+    activate_venv_link_lib
+    check_error $? "Impossibile attivare l'ambiente virtuale." || return 1
     
     echo "Setup completato. L'ambiente virtuale è attivo."
     echo ""
