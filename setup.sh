@@ -354,9 +354,6 @@ main() {
     check_error $? "Impossibile attivare l'ambiente virtuale." || return 1
     
     echo "Setup completato. L'ambiente virtuale è attivo."
-    echo ""
-    echo "Per avviare il chatbot, esegui:"
-    echo "└─▶ $ python chatbot/flaskFrontEnd.py"
     return 0
 }
 

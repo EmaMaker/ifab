@@ -342,7 +342,7 @@ def flaskFrontEnd_useArgs(args: argparse.Namespace) -> tuple[str, int]:
     return args.host, args.port
 
 
-def start_temporary_server(port=8000, max_retries=5):
+def start_temporary_server(port=8000, max_retries=5) -> tuple[socketserver.ThreadingTCPServer, int]:
     """
     Avvia un server HTTP temporaneo per mostrare una pagina di benvenuto
     mentre il server principale si sta avviando.
@@ -407,7 +407,7 @@ def stop_temp_server(httpd):
     print("Server temporaneo fermato")
 
 if __name__ == '__main__':
-    def newSettpointMock(key):
+    def newSetPointMock(key):
         print(f"Nuovo setpoint per il robot: '{key}'")
 
 
@@ -420,7 +420,7 @@ if __name__ == '__main__':
     # Ottieni gli argomenti per il server Flask
     host, port = flaskFrontEnd_useArgs(args)
 
-    # Avvia il server temporaneo di welcomepage
+    # Avvia il server temporaneo di welcome-page
     try:
         temp_httpd, used_port = start_temporary_server(port)
         temp_server_thread = threading.Thread(target=run_temp_server, args=(temp_httpd,), daemon=True)
@@ -464,7 +464,7 @@ if __name__ == '__main__':
     # Crea l'app Flask e SocketIO con tutte le callback e le informazioni del progetto
     app, socketio, chat_client = create_app(url, auth, zone_lavoro, macchinari,
                                             ttsFun=player.play_text, sttFun=listener.transcribeText,
-                                            goBotFun=newSettpointMock)
+                                            goBotFun=newSetPointMock)
 
 
     # Aggiungi route per check-server-status che risponde che il server è pronto
