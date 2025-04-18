@@ -40,6 +40,7 @@ def create_app(url: str, auth: str,
     # Callback per gestire l'inoltro dei messaggi dal backend (bot o stt) al frontend
     # se ho un messaggio ID, allora devo aggiornare quel baloon
     def backEnd_msg2UI(text, message_id=None, audio_enable=True):
+        text = text.replace("Il contenuto generato dall'IA potrebbe essere errato", "")
         """Callback function for when a message is received from the bot"""
         if not message_id:  # Nessuno ID messaggio, quindi è un messaggio normale
             messageBox("Send new message to frontEnd", text, StyleBox.Dash_Light)
