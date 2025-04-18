@@ -6,6 +6,10 @@
 # Opzioni di default
 FORCE_SETUP=false
 
+# Ottieni il percorso assoluto della directory dello script
+IFAB_SRC_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+
 # Funzione per rilevare il sistema operativo
 detect_os() {
     if [[ "$(uname)" == "Darwin" ]]; then
@@ -182,6 +186,54 @@ install_pip_dependencies() {
     fi
 }
 
+# Funzione per creare un'icona desktop (solo Linux)
+create_desktop_icon() {
+    echo "Creazione dell'icona desktop per IFAB Chatbot..."
+
+    # Controlla se siamo su Linux
+    if [[ "$(uname)" != "Linux" ]]; then
+        echo "La creazione dell'icona desktop è supportata solo su Linux."
+        return 0
+    fi
+
+    # Path assoluto script di avvio
+    LAUNCHER_SCRIPT="$IFAB_SRC_DIR/start-chatbot.sh"
+
+    # Determina la directory Desktop (supporto multi-lingua)
+    if command -v xdg-user-dir &> /dev/null; then
+        DESKTOP_DIR=$(xdg-user-dir DESKTOP)
+    else
+        DESKTOP_DIR="$HOME/Desktop"
+        if [[ ! -d "$DESKTOP_DIR" ]]; then
+            # Prova con la cartella Scrivania (italiano)
+            DESKTOP_DIR="$HOME/Scrivania"
+            if [[ ! -d "$DESKTOP_DIR" ]]; then
+                echo "AVVISO: Directory Desktop non trovata. L'icona verrà creata nella directory home."
+                DESKTOP_DIR="$HOME"
+            fi
+        fi
+    fi
+
+    # Crea il file .desktop
+    DESKTOP_FILE="$DESKTOP_DIR/ifab-chatbot.desktop"
+
+cat > "$DESKTOP_FILE" << EOF
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=IFAB Chatbot
+Comment=Avvia IFAB Chatbot
+Exec=x-terminal-emulator -e "$LAUNCHER_SCRIPT"
+Icon="$IFAB_SRC_DIR/chatbot/web-client/favicon.ico"
+Terminal=false
+Categories=Development;
+EOF
+
+    chmod +x "$DESKTOP_FILE"
+
+    echo "Icona desktop creata con successo in $DESKTOP_FILE"
+}
+
 # Funzione per verificare gli errori e interrompere l'esecuzione se necessario
 check_error() {
     local exit_code=$1
@@ -249,6 +301,11 @@ main() {
 
         install_pip_dependencies
         check_error $? "Installazione delle dipendenze Python fallita." || return 1
+
+        if [[ "$(uname)" == "Linux" ]]; then
+            echo "Creazione icona desktop..."
+            create_desktop_icon
+        fi
 
         echo "Setup completato. Si suggeriesce di attivare anche l'argcomplete globale (avrà effetto dal prossimo riavvio):"
         echo "└─▶ $ activate-global-python-argcomplete"
