@@ -1,0 +1,45 @@
+:root {
+    --primary-color: #0078d4;
+    --secondary-color: #f3f3f3;
+    --accent-color: #0056b3;
+    --text-color: #333;
+    --light-text: #666;
+    --border-color: #ddd;
+    --bot-message-bg: #e6f7ff;
+    --user-message-bg: #f0f0f0;
+    --recording-color: #ff4d4d;
+    --volume-indicator-color: rgba(255, 77, 77, 0.3);
+    --error-message-bg: #ffebcc; /* Colore arancione chiaro per i messaggi di errore */
+    --error-message-gui-bg: #fff2c7; /* Colore giallo chiaro per i messaggi di errore del frontend*/
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: #f9f9f9;
+    color: var(--text-color);
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.main-layout {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 15px;
+    flex: 1;
+    overflow: hidden;
+}

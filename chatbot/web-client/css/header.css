@@ -1,0 +1,57 @@
+/* Stili per l'header e la navigazione */
+header {
+    position: relative;
+    margin-bottom: 20px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.header-icon {
+    width: 32px;
+    height: 32px;
+    margin-right: 10px;
+    vertical-align: middle;
+}
+
+.header-buttons {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+}
+
+h1 {
+    color: var(--primary-color);
+    font-size: 1.8rem;
+}
+
+.about-us-button {
+    padding: 8px 15px;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+    margin-right: 10px;
+    position: relative;
+}
+
+/* Stile a freccia solo per il pulsante 'Chi siamo' */
+.about-us-button[href="/about"] {
+    clip-path: polygon(0 0, 85% 0, 100% 50%, 85% 100%, 0 100%);
+    padding-right: 20px;
+}
+
+.about-us-button:hover {
+    background-color: var(--accent-color);
+}

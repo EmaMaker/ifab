@@ -1,0 +1,110 @@
+/* Stili per le animazioni e i componenti audio */
+@keyframes pulse {
+    0% {
+        opacity: 0.7;
+    }
+    50% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0.7;
+    }
+}
+
+@keyframes audio-loading {
+    0%, 100% {
+        transform: scale(0.6);
+        opacity: 0.6;
+    }
+    50% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Stili per i componenti audio */
+.audio-message {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.audio-play-btn {
+    background-color: #e6e6e6;
+    border: none;
+    color: #4CAF50; /* Cambiato da var(--primary-color) a verde */
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.3s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    width: 32px;
+    height: 32px;
+}
+
+.audio-play-btn:hover {
+    background-color: rgba(76, 175, 80, 0.1); /* Cambiato per riflettere il nuovo colore verde */
+}
+
+.audio-play-btn svg {
+    width: 24px;
+    height: 24px;
+    fill: currentColor;
+}
+
+.audio-transcription {
+    white-space: pre-wrap;
+    word-break: break-word;
+    display: block;
+    margin-top: 5px;
+}
+
+/* Animazione di caricamento all'interno dei messaggi audio */
+.audio-transcription .loading-animation {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    margin-right: 5px;
+    vertical-align: middle;
+}
+
+.audio-transcription .loading-animation div {
+    width: 6px;
+    height: 6px;
+    background-color: #4CAF50;
+    border-radius: 50%;
+    animation: audio-loading 1.2s infinite ease-in-out;
+}
+
+.audio-transcription .loading-animation div:nth-child(1) {
+    animation-delay: 0s;
+}
+
+.audio-transcription .loading-animation div:nth-child(2) {
+    animation-delay: 0.3s;
+}
+
+.audio-transcription .loading-animation div:nth-child(3) {
+    animation-delay: 0.6s;
+}
+
+.audio-transcription .loading-animation div:nth-child(4) {
+    animation-delay: 0.9s;
+}
+
+/* Animazione per i pulsanti di registrazione */
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(255, 77, 77, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(255, 77, 77, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 77, 77, 0);
+    }
+}

@@ -1,0 +1,126 @@
+/* Stili per i messaggi della chat */
+.message {
+    margin-bottom: 10px;
+    padding: 10px 15px 5px;
+    border-radius: 18px;
+    max-width: 80%;
+    width: fit-content;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+    display: inline-block;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.bot-message {
+    background-color: var(--bot-message-bg);
+    align-self: flex-start;
+    margin-right: auto;
+    float: left;
+    clear: both;
+    position: relative;
+    line-height: 1.3; /* Ulteriormente ridotto lo spazio tra le righe */
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin-bottom: 0;
+}
+
+/* Rimuove spazi vuoti generati da marked.js */
+.bot-message > :last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+/* Assicura che non ci siano spazi vuoti dopo paragrafi e liste */
+.bot-message p:last-child,
+.bot-message ul:last-child,
+.bot-message ol:last-child,
+.bot-message pre:last-child,
+.bot-message blockquote:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.bot-message.with-icon {
+    padding-left: 40px;
+}
+
+.bot-message .bot-icon {
+    position: absolute;
+    left: 5px;
+    bottom: 5px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background-color: white;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.bot-message .bot-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.user-message {
+    background-color: var(--user-message-bg);
+    border-bottom-right-radius: 5px;
+    align-self: flex-end;
+    margin-left: auto;
+    text-align: left;
+    float: right;
+    clear: both;
+}
+
+.error-message {
+    background-color: var(--error-message-bg) !important;
+    border-left: 4px solid #ff9800; /* Bordo arancione per evidenziare l'errore */
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.error-message-gui {
+    background-color: var(--error-message-gui-bg) !important;
+    border-left: 4px solid #ecd27c; /* Bordo arancione per evidenziare l'errore */
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* Stili per il contenuto Markdown nei messaggi del bot */
+.bot-message ul, .bot-message ol {
+    padding-left: 20px;
+    margin: 2px 0 0;
+}
+
+.bot-message p {
+    margin: 2px 0 0;
+    padding-bottom: 0;
+}
+
+.bot-message strong {
+    font-weight: bold;
+}
+
+.bot-message em {
+    font-style: italic;
+}
+
+.bot-message code {
+    background-color: rgba(0, 0, 0, 0.05);
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-family: monospace;
+    margin-bottom: 0;
+}
+
+/* Stile per il messaggio di connessione persa */
+.connection-lost {
+    background-color: rgba(255, 152, 0, 0.2);
+    color: #e65100;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: bold;
+    animation: pulse 1.5s infinite;
+    border-left: 4px solid #ff9800;
+    margin: 10px 0;
+}

@@ -1,0 +1,126 @@
+/* Stili per i pulsanti */
+.btn {
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 50%;
+    background-color: var(--primary-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn:hover {
+    background-color: var(--accent-color);
+}
+
+.btn:active {
+    transform: scale(0.95);
+}
+
+.btn svg {
+    width: 24px;
+    height: 24px;
+    fill: currentColor;
+}
+
+.btn-record svg {
+    width: 28px;
+    height: 28px;
+}
+
+.btn-record {
+    background-color: white;
+    color: var(--recording-color);
+    border: 1px solid var(--border-color);
+    width: 50px;
+    height: 50px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.btn-record:hover {
+    background-color: #fff2f2;
+    transform: scale(1.05);
+    box-shadow: 0 3px 8px rgba(255, 77, 77, 0.3);
+}
+
+.btn-record.recording {
+    background-color: var(--recording-color);
+    color: white;
+    animation: pulse 1.5s infinite;
+}
+
+/* Stili per i pulsanti statici */
+.static-btn {
+    width: 100%;
+    padding: 12px 15px;
+    border: none;
+    border-radius: 8px;
+    background-color: var(--primary-color);
+    color: white;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: transform 0.2s, background-color 0.3s;
+    text-align: center;
+    margin-bottom: 10px;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+}
+
+.static-btn::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.4);
+    border-radius: 8px;
+    z-index: 0;
+}
+
+.static-btn:hover {
+    background-color: var(--accent-color);
+}
+
+.static-btn:hover::before {
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+.static-btn.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.static-btn span {
+    position: relative;
+    z-index: 1;
+}
+
+/* Animazione per i pulsanti statici quando vengono premuti */
+.static-btn.button-pressed {
+    transform: scale(0.95);
+    transition: transform 0.2s;
+}
+
+.volume-indicator {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background-color: var(--volume-indicator-color);
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0;
+    transition: transform 0.1s ease-out, opacity 0.1s ease-out;
+    pointer-events: none;
+    z-index: 0;
+}

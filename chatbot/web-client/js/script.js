@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', function () {
-    const chatContainer = document.getElementById('chatContainer');
     const messageContainer = document.getElementById('messageContainer');
     const messageInput = document.getElementById('messageInput');
     const sendButton = document.getElementById('sendButton');

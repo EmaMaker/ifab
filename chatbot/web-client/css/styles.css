@@ -643,10 +643,24 @@ h1 {
     fill: currentColor;
 }
 
+.btn-record svg {
+    width: 28px;
+    height: 28px;
+}
+
 .btn-record {
     background-color: white;
     color: var(--recording-color);
     border: 1px solid var(--border-color);
+    width: 50px;
+    height: 50px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.btn-record:hover {
+    background-color: #fff2f2;
+    transform: scale(1.05);
+    box-shadow: 0 3px 8px rgba(255, 77, 77, 0.3);
 }
 
 .btn-record.recording {
