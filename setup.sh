@@ -53,7 +53,13 @@ check_venv() {
 # Funzione per creare l'ambiente virtuale
 create_venv() {
     echo "Creazione dell'ambiente virtuale Python..."
-    
+
+    # Verifica se l'ambiente virtuale esiste già e lo rimuove
+    if [[ -d ".venv" ]]; then
+        echo "Ambiente virtuale esistente trovato. Eliminazione in corso..."
+        rm -rf .venv
+    fi
+
     # Verifica se python3.10 è disponibile
     if command -v python3.10 &> /dev/null; then
         python3.10 -m venv .venv
@@ -61,7 +67,7 @@ create_venv() {
         # Fallback a python3 con specifica della versione
         python3 -m venv .venv --python=python3.10
     fi
-    
+
     if [[ $? -ne 0 ]]; then
         echo "Setup interrotto nella fase di creazione dell'ambiente virtuale. Assicurati di avere Python 3.10 installato"
         return 1
@@ -289,16 +295,24 @@ main() {
         fi
 
         # Installa Python 3.10 se necessario
+        echo "Installazione Python 3.10..."
         install_python
         check_error $? "Installazione di Python 3.10 fallita." || return 1
 
         # Installa le dipendenze di sistema
+        echo "Installazione delle dipendenze di sistema..."
         install_system_dependencies
         check_error $? "Installazione delle dipendenze di sistema fallita." || return 1
 
+        echo "Creazione dell'ambiente virtuale..."
         create_venv
         check_error $? "Creazione dell'ambiente virtuale fallita." || return 1
 
+        echo "Attivazione dell'ambiente virtuale..."
+        activate_venv_link_lib
+        check_error $? "Attivazione dell'ambiente virtuale fallita." || return 1
+
+        echo "Installazione delle dipendenze Python..."
         install_pip_dependencies
         check_error $? "Installazione delle dipendenze Python fallita." || return 1
 
