@@ -1,0 +1,161 @@
+<!-- chatbot/web-client/welcome.html -->
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>IFAB Web Chat - Caricamento</title>
+    <link href="/css/variables.css" rel="stylesheet">
+    <link href="/css/layout.css" rel="stylesheet">
+    <link href="/css/header.css" rel="stylesheet">
+    <link href="/css/animations-audio.css" rel="stylesheet">
+    <style>
+        .welcome-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 80vh;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .welcome-message {
+            margin-bottom: 30px;
+            max-width: 600px;
+        }
+
+        .welcome-title {
+            font-size: 32px;
+            margin-bottom: 20px;
+            color: var(--primary-color);
+        }
+
+        .welcome-subtitle {
+            font-size: 18px;
+            color: var(--light-text);
+            margin-bottom: 30px;
+        }
+
+        .loading-box {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .loading-status {
+            margin-top: 20px;
+            font-size: 16px;
+            color: var(--light-text);
+            font-style: italic;
+        }
+
+        .welcome-logo {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <div class="header-content">
+            <img src="/favicon.ico" alt="Logo" class="header-icon">
+            <h1>IFAB Web Chat</h1>
+        </div>
+    </header>
+
+    <div class="welcome-container">
+        <div class="welcome-message">
+            <img src="/favicon.ico" alt="Logo" class="welcome-logo">
+            <h2 class="welcome-title">Benvenuti in IFAB Web Chat</h2>
+            <p class="welcome-subtitle">Stiamo caricando le risorse necessarie per il chatbot...</p>
+        </div>
+
+        <div class="loading-box">
+            <div class="loading-animation" style="margin: 0 auto;">
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+            </div>
+            <p class="loading-status" id="loadingStatus">Inizializzazione delle risorse...</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const loadingStatus = document.getElementById('loadingStatus');
+        const statusMessages = [
+            'Inizializzazione delle risorse...',
+            'Caricamento moduli di intelligenza artificiale...',
+            'Configurazione del sistema di comunicazione...',
+            'Connessione ai servizi remoti...',
+            'Preparazione dell\'interfaccia utente...'
+        ];
+
+        let currentStatus = 0;
+        let failedAttempts = 0;
+        const maxFailedAttempts = 60; // 5 minuti (60 * 5s)
+
+        // Funzione per cambiare periodicamente il messaggio di stato
+        function rotateStatus() {
+            currentStatus = (currentStatus + 1) % statusMessages.length;
+            loadingStatus.textContent = statusMessages[currentStatus];
+        }
+
+        // Cambia il messaggio ogni 3 secondi
+        setInterval(rotateStatus, 3000);
+
+        // Verifica se il server principale è pronto
+        function checkServerStatus() {
+            fetch('/check-server-status')
+                .then(response => {
+                    if (response.ok) {
+                        return response.json();
+                    }
+                    throw new Error('Network response was not ok');
+                })
+                .then(data => {
+                    if (data.ready) {
+                        // Aggiungi un messaggio di conferma
+                        loadingStatus.textContent = "Server pronto! Reindirizzamento...";
+                        loadingStatus.style.color = "var(--primary-color)";
+                        // Forza la navigazione diretta dopo un breve ritardo
+                        setTimeout(() => {
+                            window.location.replace('/');
+                        }, 500);
+                        // Importante: non programmare un altro check
+                        return;
+                    } else {
+                        // Solo se non è pronto, continua a controllare
+                        scheduleNextCheck();
+                    }
+                })
+                .catch(error => {
+                    console.log('Server not ready yet:', error);
+                    scheduleNextCheck();
+                });
+        }
+
+        function scheduleNextCheck() {
+            failedAttempts++;
+            if (failedAttempts > maxFailedAttempts) {
+                loadingStatus.textContent = 'Problemi di connessione al server. Ricarica la pagina per riprovare.';
+                loadingStatus.style.color = 'var(--recording-color)';
+            } else {
+                setTimeout(checkServerStatus, 5000);
+            }
+        }
+
+        // Inizia a controllare lo stato del server
+        setTimeout(checkServerStatus, 2000);
+    });
+</script>
+</body>
+</html>
