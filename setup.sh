@@ -56,8 +56,8 @@ create_venv() {
 
     # Verifica se l'ambiente virtuale esiste già e lo rimuove
     if [[ -d ".venv" ]]; then
-        echo "Ambiente virtuale esistente trovato. Eliminazione in corso..."
-        rm -rf .venv
+        echo "Ambiente virtuale esistente trovato. Utilizzo dell'ambiente esistente..."
+        return 0
     fi
 
     # Verifica se python3.10 è disponibile
@@ -205,6 +205,18 @@ create_desktop_icon() {
     # Path assoluto script di avvio
     LAUNCHER_SCRIPT="$IFAB_SRC_DIR/start-chatbot.sh"
 
+    # Determina quale terminale utilizzare
+    TERMINAL_CMD="x-terminal-emulator"
+    if ! command -v $TERMINAL_CMD &> /dev/null; then
+        # Cerca altri terminali comuni
+        for term in konsole gnome-terminal xterm terminator kitty alacritty xfce4-terminal lxterminal; do
+            if command -v $term &> /dev/null; then
+                TERMINAL_CMD=$term
+                break
+            fi
+        done
+    fi
+
     # Determina la directory Desktop (supporto multi-lingua)
     if command -v xdg-user-dir &> /dev/null; then
         DESKTOP_DIR=$(xdg-user-dir DESKTOP)
@@ -220,6 +232,13 @@ create_desktop_icon() {
         fi
     fi
 
+    # Verifica se esiste l'icona personalizzata o usa un'icona di sistema
+    ICON_PATH="$IFAB_SRC_DIR/chatbot/web-client/favicon.ico"
+    if [[ ! -f "$ICON_PATH" ]]; then
+        # Usa un'icona di sistema come fallback
+        ICON_PATH="utilities-terminal"
+    fi
+
     # Crea il file .desktop
     DESKTOP_FILE="$DESKTOP_DIR/ifab-chatbot.desktop"
 
@@ -229,8 +248,8 @@ Version=1.0
 Type=Application
 Name=IFAB Chatbot
 Comment=Avvia IFAB Chatbot
-Exec=x-terminal-emulator -e "$LAUNCHER_SCRIPT"
-Icon="$IFAB_SRC_DIR/chatbot/web-client/favicon.ico"
+Exec=$TERMINAL_CMD -e "$LAUNCHER_SCRIPT"
+Icon=$ICON_PATH
 Terminal=false
 Categories=Development;
 EOF
@@ -238,6 +257,8 @@ EOF
     chmod +x "$DESKTOP_FILE"
 
     echo "Icona desktop creata con successo in $DESKTOP_FILE"
+    echo "Utilizzando terminale: $TERMINAL_CMD"
+    echo "Utilizzando icona: $ICON_PATH"
 }
 
 # Funzione per verificare gli errori e interrompere l'esecuzione se necessario
