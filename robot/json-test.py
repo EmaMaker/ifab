@@ -4,18 +4,11 @@ import socket
 
 CLIENT_1 = "ifab.local"
 CLIENT_PORT = 4242
+# Posizioni in metri angoli in radianti
 MESSAGE = b"""
 {
-    "robot": [
-        1.1,
-        2.2,
-        3.3
-    ],
-    "target": [
-        4.4,
-        5.5,
-        6.6
-    ]
+'robot': {'x': 4.909115677648179, 'y': 15.008719473020381, 'theta': -0.09239503516195423},
+'target': {'x': 5.909115677648179, 'y': 17.008719473020381,'theta': -0.19239503516195423}
 }
 """
 

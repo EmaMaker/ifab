@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from canny_edge_detection import CannyEdgeDetector
+from .canny_edge_detection import CannyEdgeDetector
 
 class QuadrilateralTransformer(CannyEdgeDetector):
     def __init__(self, camera_index=0, lower_threshold=100, upper_threshold=200, 

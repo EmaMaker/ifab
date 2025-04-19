@@ -4,7 +4,7 @@ from typing import Callable
 import cv2
 import numpy as np
 
-from quadrilateral_transformer import QuadrilateralTransformer
+from .quadrilateral_transformer import QuadrilateralTransformer
 
 # TODO: Ripulirlo dall'edge detection
 
@@ -202,15 +202,12 @@ class ArUcoQuadrilateralTransformer(QuadrilateralTransformer):
                         # Add text with marker information
                         pos_text = f"ID: {marker_id}, Pos: ({pos_x_cm:.1f}cm, {pos_y_cm:.1f}cm)"
                         angle_text = f"Angle: {transformed_angle_deg:.1f}°"
+                        print(f"-{pos_text}\n-{angle_text}\n------------")
                         cv2.putText(warped, pos_text, (int(transformed_x) + 10, int(transformed_y)),
                                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
                         cv2.putText(warped, angle_text, (int(transformed_x) + 10, int(transformed_y) + 20),
                                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
 
-                # Print the internal markers information to console
-                macData = self.get_macchinario("3d", frame)
-                if macData is not None:
-                    print(macData)
         else:
             # Use blank frame when no quadrilateral is found and no previous good corners
             # TODO: Mostrare comunque frame attuale per far capire che succede
@@ -286,6 +283,7 @@ class ArUcoQuadrilateralTransformer(QuadrilateralTransformer):
             transformed_y = transformed_center[1] / transformed_center[2]
 
             # Convert pixel coordinates to cm from top-left
+            # TODO: aggiungere offset x e y per aruco noto da config.json
             pos_x_cm = transformed_x * self.scale_x
             pos_y_cm = transformed_y * self.scale_y
 
@@ -306,6 +304,7 @@ class ArUcoQuadrilateralTransformer(QuadrilateralTransformer):
             tp2 = tp2 / tp2[2]
 
             # Calculate the transformed angle
+            # TODO: aggiungere offset theta per aruco noto da config.json
             transformed_angle_rad = np.arctan2(tp2[1] - tp1[1], tp2[0] - tp1[0])
             transformed_angle_deg = np.degrees(transformed_angle_rad)
 
@@ -314,7 +313,7 @@ class ArUcoQuadrilateralTransformer(QuadrilateralTransformer):
                 'id': int(marker_id),
                 'position': [float(pos_x_cm), float(pos_y_cm)],
                 'position_px': [float(transformed_x), float(transformed_y)],
-                'angle': float(transformed_angle_deg)
+                'angle': float(transformed_angle_rad)
             }
 
             # Check if this is the robot marker

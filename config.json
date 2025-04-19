@@ -1,0 +1,33 @@
+{
+  "cameraIndex": 0,
+  "table": {
+    "aruco": {
+      "top-left": 10,
+      "top-right": 12,
+      "bottom-left": 16,
+      "bottom-right": 14
+    },
+    "width": 160,
+    "height": 90
+  },
+  "robot": {
+    "aruco": 18,
+    "x_offset": 2,
+    "y_offset": 0,
+    "theta_offset": 0
+  },
+  "macchinari": {
+    "3d": {
+      "aruco": 22,
+      "x_offset": 30,
+      "y_offset": 30,
+      "theta_offset": 0
+    },
+    "laser": {
+      "aruco": 24,
+      "x_offset": 0,
+      "y_offset": 0,
+      "theta_offset": 0
+    }
+  }
+}
