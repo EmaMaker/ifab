@@ -84,6 +84,7 @@ void wifi_receive(){
     Serial.println(target_y);
     Serial.println(target_theta);
 
+    set_robot_position({robot_x, robot_y, robot_theta, micros()});
     set_desired_position({target_x, target_y, target_theta});
   }
 }

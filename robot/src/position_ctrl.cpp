@@ -55,12 +55,12 @@ void update_position_ctrl(){
     position_robot = new_position;
     timer_position = t;
 
-    // Serial.print("X: ");
-    // Serial.print(position_robot.x);
-    // Serial.print(" | Y: ");
-    // Serial.print(position_robot.y);
-    // Serial.print(" | T: ");
-    // Serial.println(position_robot.theta);  
+    Serial.print("X: ");
+    Serial.print(position_robot.x);
+    Serial.print(" | Y: ");
+    Serial.print(position_robot.y);
+    Serial.print(" | T: ");
+    Serial.println(position_robot.theta);  
     
     switch(ctrl_phase){
       case CTRL_PHASE_IDLE:
@@ -108,8 +108,7 @@ void update_position_ctrl(){
         double d1 = angle_diff(position_robot.theta, position_fin.theta);
         double d2 = TWO_PI - d1;
         double d = -min(d1, d2);
-        Serial.print(" | T: ");
-        Serial.println(position_robot.theta);  
+        
         pos_orient = d;
         setpoint_orient = 0;
         if(abs(d) <= radians(3)){
@@ -206,6 +205,11 @@ void decouple_w(double output[], double input[]){
 
   output[0] = w_11*input[0] + w_12*input[1];
   output[1] = w_21*input[0] + w_22*input[1];
+}
+
+void set_robot_position(position_t p){
+  position_robot = p;
+  position_robot.tk = 0;
 }
 
 void set_desired_position(position_t goal){

@@ -27,6 +27,7 @@ constexpr float B_FROM_CENTER = 0.02;
 void init_position_ctrl(void);
 void update_position_ctrl(void);
 void set_desired_position(position_t);
+void set_robot_position(position_t);
 
 void controller_position(double[]);
 void controller_orient(double[]);
