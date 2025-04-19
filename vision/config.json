@@ -1,0 +1,19 @@
+{
+    "table": {
+        "aruco": {
+            "top-left": 10,
+            "top-right": 12,
+            "bottom-left": 16,
+            "bottom-right": 14
+        },
+        "width": 30,
+        "height": 30
+    },
+    "robot": 18,
+    "macchinari": [
+        {
+            "name": "Stampante 3D",
+            "aruco": 20
+        }
+    ]
+}
