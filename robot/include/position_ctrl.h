@@ -37,5 +37,7 @@ double dst(position_t, position_t);
 double dst_sq(position_t, position_t);
 double err_orient(position_t, position_t);
 
+double angle_diff(double, double);
+
 
 #endif
