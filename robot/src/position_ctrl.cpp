@@ -82,7 +82,7 @@ void update_position_ctrl(){
         s = 0.0;
         traj_start_time = micros()*1e-6; // Start time of the movement
 
-        Serial.println("INIT POS");
+        // Serial.println("INIT POS");
         ctrl_phase = CTRL_PHASE_POSITION;
       break;
       case CTRL_PHASE_POSITION:
@@ -93,7 +93,7 @@ void update_position_ctrl(){
           ctrl_phase = CTRL_PHASE_INIT_ORIENT_FINAL;
         }else controller_position(angspd);
 
-        Serial.println("POS");
+        // Serial.println("POS");
       break;
       case CTRL_PHASE_INIT_ORIENT_FINAL:
         ctrl_orient.Initialize();
@@ -103,10 +103,15 @@ void update_position_ctrl(){
         Serial.println("INIT ORIENT");
       break;
       case CTRL_PHASE_ORIENT_FINAL:
-
-        Serial.println("ORIENT");
-
-        if(abs(err_orient(position_robot, position_fin)) <= radians(3)){
+        // Serial.println("ORIENT");
+        
+        double d1 = angle_diff(position_robot.theta, position_fin.theta);
+        double d2 = TWO_PI - d1;
+        double d = -min(d1, d2);
+        
+        pos_orient = d;
+        setpoint_orient = 0;
+        if(abs(d) <= radians(3)){
           ctrl_orient.SetMode(ctrl_orient.Control::manual);
           ctrl_phase = CTRL_PHASE_IDLE;
         } else controller_orient(angspd); 
@@ -167,11 +172,6 @@ void controller_position(double output[]){
 }
 
 void controller_orient(double output[]){
-  pos_orient = position_robot.theta;
-  while(pos_orient > PI) pos_orient -= PI;
-  while(pos_orient < -PI) pos_orient += PI;
-  setpoint_orient = position_fin.theta;
-
   ctrl_orient.Compute();
   double inw[] = {0, output_orient};
   decouple_w(output, inw);
@@ -207,10 +207,18 @@ void decouple_w(double output[], double input[]){
   output[1] = w_21*input[0] + w_22*input[1];
 }
 
+void set_robot_position(position_t p){
+  position_robot = p;
+  position_robot.tk = 0;
+}
+
 void set_desired_position(position_t goal){
-  // Store the current position as the start of trajectory
   position_init = position_robot;
   position_fin = goal;
+
+  // theta goal counting multiplicity
+  // position_fin.theta = theta_multiplicity(position_init, position_fin.theta);
+  // Serial.println(position_fin.theta);
 
   ctrl_phase = CTRL_PHASE_INIT_POSITION;
 }
@@ -225,6 +233,16 @@ double dst_sq(position_t p1, position_t p2){
   return ex*ex + ey*ey;
 }
 
-double err_orient(position_t p1, position_t p2){
-  return min(p1.theta - p2.theta, p2.theta - p1.theta);
+double angle_diff(double a1, double a2){
+  double n1x = cos(a1);
+  double n1y = sin(a1);
+  double n1z = 0;
+  double n2x = cos(a2);
+  double n2y = sin(a2);
+  double n2z = 0;
+
+  double sprod = n1x*n2x + n1y*n2y + n1z*n2z;
+  double cprod_z = -n1y*n2x + n1x*n2y;
+  double sign = cprod_z >= 0 ? 1 : -1;
+  return sign * acos(sprod);
 }
