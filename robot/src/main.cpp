@@ -73,7 +73,7 @@ void wifi_receive(){
       double robot_x = doc["robot"][0];
       double robot_y = doc["robot"][1];
       double robot_theta = doc["robot"][2];
-      
+
       Serial.println(robot_x);
       Serial.println(robot_y);
       Serial.println(robot_theta);     

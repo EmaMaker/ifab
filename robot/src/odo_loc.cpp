@@ -6,13 +6,11 @@
 void odometric_localization(position_t* new_position, position_t* old_position){
     // exact linearization
     // when omega circa 0 fall back to runge kutta
-    unsigned long t = micros();
-    unsigned long dt = t - old_position->tk;
-    double dt_f = dt*1e-6;
+    double dt_f = 1e-3*old_position->tk;
     double omega = angular_w(get_angspd_sx(), get_angspd_dx());
     double v = linear_v(get_angspd_sx(), get_angspd_dx());
 
-    new_position->tk = t;
+    new_position->tk = 0;
     new_position->theta = old_position->theta + omega*dt_f;
     if (omega <= 1e-4){     //very close to zero -> moving in a straight line
         // fall back to runge kutta/euler

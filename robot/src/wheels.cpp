@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <QuickPID.h>
 #include <PicoEncoder.h>
+#include <elapsedMillis.h>
 
 #include "pins.h"
 #include "motors.h"
@@ -8,10 +9,9 @@
 
 PicoEncoder enc_dx, enc_sx;
 
-unsigned long t = time_us_32();
-unsigned long old_t = time_us_32();
+elapsedMillis timer_wheels = 0;
 
-constexpr unsigned long sample_time_micros = 5000;
+constexpr unsigned long sample_time_wheels_millis = 5;
 constexpr int mobileavg_nelems = 200;
 constexpr float alpha = 1.0 / mobileavg_nelems;
 constexpr float resolution_rad = 0.0057;
@@ -39,8 +39,8 @@ void init_wheels(){
     init_motors();
     init_encoders();
 
-    ctrl_sx.SetSampleTimeUs(sample_time_micros);
-    ctrl_dx.SetSampleTimeUs(sample_time_micros);
+    ctrl_sx.SetSampleTimeUs(sample_time_wheels_millis*1e3);
+    ctrl_dx.SetSampleTimeUs(sample_time_wheels_millis*1e3);
 
     ctrl_sx.SetOutputLimits(-12, 12);
     ctrl_dx.SetOutputLimits(-12, 12);
@@ -66,15 +66,13 @@ void update_encoders(){
   enc_sx.update();
   enc_dx.update();
 
-  t = time_us_32();
-  unsigned long dt = t-old_t;
-  if(dt < sample_time_micros) return;
+  if(timer_wheels < sample_time_wheels_millis) return;
 
   pos_sx = enc_sx.step;
   pos_dx = enc_dx.step;
 
-  double spd_tmp_sx = (pos_sx - old_pos_sx)*resolution_rad/(dt*1e-6);
-  double spd_tmp_dx = (pos_dx - old_pos_dx)*resolution_rad/(dt*1e-6);
+  double spd_tmp_sx = (pos_sx - old_pos_sx)*resolution_rad/(timer_wheels*1e-3);
+  double spd_tmp_dx = (pos_dx - old_pos_dx)*resolution_rad/(timer_wheels*1e-3);
 
   mobileavg_window_sx[0] = spd_tmp_sx;
   mobileavg_window_dx[0] = spd_tmp_dx;
@@ -86,9 +84,9 @@ void update_encoders(){
     mobileavg_window_sx[i] = mobileavg_window_sx[i-1];
     mobileavg_window_dx[i] = mobileavg_window_dx[i-1];
   }
-  old_t = t;
   old_pos_sx = pos_sx;
   old_pos_dx = pos_dx;
+  timer_wheels = 0;
   
 #ifdef PRINT_VELOCITY
   Serial.print("Angular velocity (sx): ");
