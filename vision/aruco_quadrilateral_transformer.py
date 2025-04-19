@@ -84,7 +84,7 @@ class ArUcoQuadrilateralTransformer(QuadrilateralTransformer):
                 found_markers += 1
 
         # Only draw and display if display flag is True
-        if display and ids is not None:
+        if display:
             cv2.aruco.drawDetectedMarkers(frame, corners, ids)
 
             # Draw the quadrilateral
@@ -208,7 +208,9 @@ class ArUcoQuadrilateralTransformer(QuadrilateralTransformer):
                                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
 
                 # Print the internal markers information to console
-                print(self.get_macchinario("Stampante 3D"))
+                macData = self.get_macchinario("3d", frame)
+                if macData is not None:
+                    print(macData)
         else:
             # Use blank frame when no quadrilateral is found and no previous good corners
             # TODO: Mostrare comunque frame attuale per far capire che succede
@@ -221,15 +223,16 @@ class ArUcoQuadrilateralTransformer(QuadrilateralTransformer):
         # Return warped frame
         return warped
 
-    def process_frame_data(self, display=False):
+    def process_frame_data(self, frame=None) -> dict:
         """Process a frame and return marker data without displaying UI"""
-        # Capture frame from camera
-        ret, frame = self.cam.read()
-        if not ret:
-            return {}
+        # If no frame is provided, use the current frame from the camera
+        if frame is None:
+            ret, frame = self.cam.read()
+            if not ret:
+                return {}
 
         # Find quadrilateral using ArUco markers - but don't display
-        corners = self.find_quadrilateral(frame, display=display)
+        corners = self.find_quadrilateral(frame, display=False)
 
         # Convert to grayscale for ArUco detection (for all markers)
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -258,7 +261,7 @@ class ArUcoQuadrilateralTransformer(QuadrilateralTransformer):
 
         # Process markers
         result = {
-            'markers': [],
+            'markers': {},
             'robot': None
         }
 
@@ -315,10 +318,10 @@ class ArUcoQuadrilateralTransformer(QuadrilateralTransformer):
             }
 
             # Check if this is the robot marker
-            if marker_id == self.robot:
+            if marker_id == self.robot.get("aruco"):
                 result['robot'] = marker_data
             else:
-                result[self.macchinari_id[marker_id]] = marker_data
+                result['markers'][self.macchinari_id.get(marker_id,f"unknown_{marker_id}")] = marker_data
 
         if newData and self.sendToRobot:
             # Send data to robot
@@ -410,13 +413,11 @@ class ArUcoQuadrilateralTransformer(QuadrilateralTransformer):
 
         return robot_data
 
-    def get_id_macchinario_from_name(self, name):
-        for macchinario in self.macchinari:
-            if macchinario["name"] == name:
-                return macchinario["aruco"]
-        return None
+    # Function to get the ArUco ID from the macchinario name
+    def get_id_macchinario_from_name(self, key):
+        return self.macchinari.get(key, {}).get("aruco", None)
 
-    def get_macchinario(self, name="", frame=None):
+    def get_macchinario(self, key="", frame=None):
         # If no frame is provided, use the current frame from the camera
         if frame is None:
             ret, frame = self.cam.read()
@@ -446,7 +447,7 @@ class ArUcoQuadrilateralTransformer(QuadrilateralTransformer):
         # Look for the robot marker
         macchinario_data = None
         for i, marker_id in enumerate(all_ids.flatten()):
-            if marker_id == self.get_id_macchinario_from_name(name=name):
+            if marker_id == self.get_id_macchinario_from_name(key=key):
                 # This is the robot marker
                 marker_corners = all_corners[i][0]
 
@@ -502,6 +503,10 @@ class ArUcoQuadrilateralTransformer(QuadrilateralTransformer):
                 break
 
             self.process_frame(frame)
+            ret = self.process_frame_data(frame)
+
+            if ret:
+                print(ret)
 
             # Press 'q' to exit
             if cv2.waitKey(1) == ord('q'):
@@ -512,10 +517,17 @@ class ArUcoQuadrilateralTransformer(QuadrilateralTransformer):
 
 # Example usage
 if __name__ == '__main__':
+    def send_to_robot(data):
+        # Placeholder function to send data to the robot
+        print("Sending data to robot:", data)
+
+
     with open('config.json') as f:
         d = json.load(f)
         corners_ids = [d['table']['aruco']['top-left'], d['table']['aruco']['top-right'], d['table']['aruco']['bottom-right'], d['table']['aruco']['bottom-left']]
         # TODO: Camera index dinamico con il nome della camera, vedi aruco-read
 
-        transformer = ArUcoQuadrilateralTransformer(camera_index=d["cameraIndex"], marker_corners_ids=corners_ids, robot=d['robot'], macchinari=d['macchinari'])
+        transformer = ArUcoQuadrilateralTransformer(camera_index=d["cameraIndex"], marker_corners_ids=corners_ids,
+                                                    robot=d['robot'], macchinari=d['macchinari'],
+                                                    sendToRobot=send_to_robot)
         transformer.run()
