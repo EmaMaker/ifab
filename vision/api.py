@@ -4,7 +4,7 @@ import threading
 import time
 import json
 
-app = Flask(__name__)
+# app = Flask(__name__)
 
 # Class to manage the transformer in a separate thread
 class TransformerThread:
@@ -68,90 +68,90 @@ class TransformerThread:
 
         return self.transformer.get_robot()
 
-# Create transformer thread instance
-transformer_thread = TransformerThread()
+# # Create transformer thread instance
+# transformer_thread = TransformerThread()
 
-@app.route('/')
-def index():
-    return jsonify({'message': 'Welcome to the IFAB Vision API'})
+# @app.route('/')
+# def index():
+#     return jsonify({'message': 'Welcome to the IFAB Vision API'})
+#
+#
+# @app.route('/api/transformer/start', methods=['POST'])
+# def start_transformer():
+#     print("start")
+#     # Get parameters from request or use defaults
+#     # Load configuration from JSON file
+#     try:
+#         with open('vision/config.json') as f:
+#             config = json.load(f)
+#             camera_index = 0
+#             marker_ids = [
+#                 config['table']['aruco']['top-left'],
+#                 config['table']['aruco']['top-right'],
+#                 config['table']['aruco']['bottom-right'],
+#                 config['table']['aruco']['bottom-left']
+#             ]
+#             min_area = 1000
+#             output_size = [800, 600]
+#             width_cm = config['table']['width']
+#             height_cm = config['table']['height']
+#             robot = config['robot']
+#             macchinari = config['macchinari']
+#     except FileNotFoundError:
+#         return jsonify({'error': 'Configuration file not found'}), 500
+#     except json.JSONDecodeError:
+#         return jsonify({'error': 'Invalid configuration file format'}), 500
+#
+#     # Update camera index if provided
+#     transformer_thread.camera_index = camera_index
+#
+#     # Start the transformer thread
+#     success = transformer_thread.start(
+#         marker_ids=marker_ids,
+#         min_area=min_area,
+#         output_size=output_size,
+#         width_cm=width_cm,
+#         height_cm=height_cm,
+#         robot=robot,
+#         macchinari=macchinari
+#     )
+#
+#     if success:
+#         return jsonify({'status': 'started'})
+#     else:
+#         return jsonify({'error': 'Transformer already running'}), 400
+#
+# @app.route('/api/transformer/stop', methods=['POST'])
+# def stop_transformer():
+#     success = transformer_thread.stop()
+#
+#     if success:
+#         return jsonify({'status': 'stopped'})
+#     else:
+#         return jsonify({'error': 'Transformer not running'}), 400
+#
+# @app.route('/api/transformer/status', methods=['GET'])
+# def transformer_status():
+#     is_running = transformer_thread.running
+#     marker_data = transformer_thread.get_marker_data() if is_running else {}
+#
+#     return jsonify({
+#         'running': is_running,
+#         'marker_data': marker_data
+#     })
+#
+# @app.route('/api/transformer/robot', methods=['GET'])
+# def get_robot_data():
+#     if not transformer_thread.running:
+#         return jsonify({'error': 'Transformer not running'}), 400
+#
+#     robot_data = transformer_thread.get_robot()
+#
+#     return jsonify({
+#         'robot': robot_data
+#     })
 
 
-@app.route('/api/transformer/start', methods=['POST'])
-def start_transformer():
-    print("start")    
-    # Get parameters from request or use defaults
-    # Load configuration from JSON file
-    try:
-        with open('vision/config.json') as f:
-            config = json.load(f)
-            camera_index = 0
-            marker_ids = [
-                config['table']['aruco']['top-left'],
-                config['table']['aruco']['top-right'],
-                config['table']['aruco']['bottom-right'],
-                config['table']['aruco']['bottom-left']
-            ]
-            min_area = 1000
-            output_size = [800, 600]
-            width_cm = config['table']['width']
-            height_cm = config['table']['height']
-            robot = config['robot']
-            macchinari = config['macchinari']
-    except FileNotFoundError:
-        return jsonify({'error': 'Configuration file not found'}), 500
-    except json.JSONDecodeError:
-        return jsonify({'error': 'Invalid configuration file format'}), 500
-    
-    # Update camera index if provided
-    transformer_thread.camera_index = camera_index
-    
-    # Start the transformer thread
-    success = transformer_thread.start(
-        marker_ids=marker_ids,
-        min_area=min_area,
-        output_size=output_size,
-        width_cm=width_cm,
-        height_cm=height_cm,
-        robot=robot,
-        macchinari=macchinari
-    )
-    
-    if success:
-        return jsonify({'status': 'started'})
-    else:
-        return jsonify({'error': 'Transformer already running'}), 400
-
-@app.route('/api/transformer/stop', methods=['POST'])
-def stop_transformer():
-    success = transformer_thread.stop()
-    
-    if success:
-        return jsonify({'status': 'stopped'})
-    else:
-        return jsonify({'error': 'Transformer not running'}), 400
-
-@app.route('/api/transformer/status', methods=['GET'])
-def transformer_status():
-    is_running = transformer_thread.running
-    marker_data = transformer_thread.get_marker_data() if is_running else {}
-    
-    return jsonify({
-        'running': is_running,
-        'marker_data': marker_data
-    })
-
-@app.route('/api/transformer/robot', methods=['GET'])
-def get_robot_data():
-    if not transformer_thread.running:
-        return jsonify({'error': 'Transformer not running'}), 400
-    
-    robot_data = transformer_thread.get_robot()
-    
-    return jsonify({
-        'robot': robot_data
-    })
-
-
-
-if __name__ == '__main__':
-    app.run(debug=True)
+#
+# if __name__ == '__main__':
+#     app.run(debug=True)

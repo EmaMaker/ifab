@@ -491,5 +491,7 @@ if __name__ == '__main__':
     with open('vision/config.json') as f:
         d = json.load(f)
         marker_ids = [d['table']['aruco']['top-left'], d['table']['aruco']['top-right'], d['table']['aruco']['bottom-right'], d['table']['aruco']['bottom-left']]
+        # TODO: Camera index dinamico con il nome della camera, vedi aruco-read
+
         transformer = ArUcoQuadrilateralTransformer(camera_index=0, marker_ids=marker_ids, robot=d['robot'], macchinari=d['macchinari'])
         transformer.run()
