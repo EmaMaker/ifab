@@ -68,28 +68,29 @@ void wifi_receive(){
       return;
     }
     
-    if(doc.containsKey("robot")){
+    if(doc["robot"]){
       // Extract the JSON objects
       double robot_x = doc["robot"][0];
       double robot_y = doc["robot"][1];
       double robot_theta = doc["robot"][2];
+
+      Serial.println(robot_x);
+      Serial.println(robot_y);
+      Serial.println(robot_theta);     
+      set_robot_position({robot_x, robot_y, robot_theta, micros()});
     }
   
-    if(doc.containsKey("target")){
+    if(doc["target"]){
       double target_x = doc["target"][0];
       double target_y = doc["target"][1];
       double target_theta = doc["target"][2];
+      
+      Serial.println(target_x);
+      Serial.println(target_y);
+      Serial.println(target_theta);
+      set_desired_position({target_x, target_y, target_theta});
     }
 
-    Serial.println(robot_x);
-    Serial.println(robot_y);
-    Serial.println(robot_theta);
-    Serial.println(target_x);
-    Serial.println(target_y);
-    Serial.println(target_theta);
-
-    set_robot_position({robot_x, robot_y, robot_theta, micros()});
-    set_desired_position({target_x, target_y, target_theta});
   }
 }
 

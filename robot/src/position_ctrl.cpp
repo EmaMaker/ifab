@@ -1,10 +1,13 @@
 #include <Arduino.h>
 #include <QuickPID.h>
+#include <elapsedMillis.h>
 
 #include "position_ctrl.h"
 #include "wheels.h"
 
-constexpr unsigned long sample_time_position_micros = 15000;
+elapsedMillis timer_position_update{0};
+elapsedMillis timer_position_ctrl{0};
+constexpr unsigned long sample_time_position_millis = 15;
 
 position_t position_robot{0};
 position_t position_init{0};
@@ -29,102 +32,103 @@ QuickPID ctrl_orient(&pos_orient, &output_orient, &setpoint_orient, KP_ORIENT, K
 void init_position_ctrl(void){
     init_wheels();
 
-    ctrl_x.SetSampleTimeUs(sample_time_position_micros);
-    ctrl_y.SetSampleTimeUs(sample_time_position_micros);
-    ctrl_orient.SetSampleTimeUs(sample_time_position_micros);
+    ctrl_x.SetSampleTimeUs(sample_time_position_millis*1e3);
+    ctrl_y.SetSampleTimeUs(sample_time_position_millis*1e3);
+    ctrl_orient.SetSampleTimeUs(sample_time_position_millis*1e3);
 
     // motors are rated at about 200RPM -> 20 rad/s
     ctrl_x.SetOutputLimits(-25*ODO_WHEEL_RADIUS, 25*ODO_WHEEL_RADIUS);
     ctrl_y.SetOutputLimits(-25*ODO_WHEEL_RADIUS, 25*ODO_WHEEL_RADIUS);
     ctrl_orient.SetOutputLimits(-25*ODO_WHEEL_RADIUS, 25*ODO_WHEEL_RADIUS);
 
-    timer_position = micros();
-    position_robot.tk = timer_position;
+    timer_position_update = 0;
+    timer_position_ctrl = 0;
+    position_robot.tk = 0;
     ctrl_phase = CTRL_PHASE_IDLE;
 }
 
 void update_position_ctrl(){
   update_wheels();
+  
+  // 2 times the sampling time of encoders.  Good enough as far as mister Nyquist is concerned
+  if(timer_position_update < sample_time_position_millis) return;
 
-  unsigned long t = micros();
-  if( t - timer_position >= sample_time_position_micros) // 2 times the sampling time of encoders.  Good enough as far as mister Nyquist is concerned
-  {
-    // odometric localization with encoders
-    position_t new_position{0};
-    odometric_localization(&new_position, &position_robot);
-    position_robot = new_position;
-    timer_position = t;
+  // odometric localization with encoders
+  position_t new_position{0};
+  odometric_localization(&new_position, &position_robot);
+  position_robot = new_position;
 
-    Serial.print("X: ");
-    Serial.print(position_robot.x);
-    Serial.print(" | Y: ");
-    Serial.print(position_robot.y);
-    Serial.print(" | T: ");
-    Serial.println(position_robot.theta);  
-    
-    switch(ctrl_phase){
-      case CTRL_PHASE_IDLE:
+  Serial.print("X: ");
+  Serial.print(position_robot.x);
+  Serial.print(" | Y: ");
+  Serial.print(position_robot.y);
+  Serial.print(" | T: ");
+  Serial.println(position_robot.theta);  
+  
+  switch(ctrl_phase){
+    case CTRL_PHASE_IDLE:
+      ctrl_x.SetMode(ctrl_x.Control::manual);
+      ctrl_y.SetMode(ctrl_y.Control::manual);
+      ctrl_orient.SetMode(ctrl_orient.Control::manual);
+
+      angspd[0] = 0;
+      angspd[1] = 0;
+      // Serial.println("IDLE");
+    break;
+    case CTRL_PHASE_INIT_POSITION:
+      ctrl_x.Initialize();
+      ctrl_y.Initialize();
+      ctrl_x.SetMode(ctrl_x.Control::automatic);
+      ctrl_y.SetMode(ctrl_y.Control::automatic);
+
+      // Reset trajectory progress
+      s = 0.0;
+      traj_start_time = 0; // Start time of the movement
+      timer_position_ctrl = 0;
+
+      // Serial.println("INIT POS");
+      ctrl_phase = CTRL_PHASE_POSITION;
+    break;
+    case CTRL_PHASE_POSITION:
+      if(dst(position_robot, position_fin) <= 0.05){
         ctrl_x.SetMode(ctrl_x.Control::manual);
         ctrl_y.SetMode(ctrl_y.Control::manual);
+
+        ctrl_phase = CTRL_PHASE_INIT_ORIENT_FINAL;
+      }else controller_position(angspd);
+
+      // Serial.println("POS");
+    break;
+    case CTRL_PHASE_INIT_ORIENT_FINAL:
+      ctrl_orient.Initialize();
+      ctrl_orient.SetMode(ctrl_orient.Control::automatic);
+
+      ctrl_phase = CTRL_PHASE_ORIENT_FINAL;
+      Serial.println("INIT ORIENT");
+    break;
+    case CTRL_PHASE_ORIENT_FINAL:
+      // Serial.println("ORIENT");
+      
+      double d1 = angle_diff(position_robot.theta, position_fin.theta);
+      double d2 = TWO_PI - d1;
+      double d = -min(d1, d2);
+      
+      pos_orient = d;
+      setpoint_orient = 0;
+      if(abs(d) <= radians(3)){
         ctrl_orient.SetMode(ctrl_orient.Control::manual);
-
-        angspd[0] = 0;
-        angspd[1] = 0;
-        // Serial.println("IDLE");
-      break;
-      case CTRL_PHASE_INIT_POSITION:
-        ctrl_x.Initialize();
-        ctrl_y.Initialize();
-        ctrl_x.SetMode(ctrl_x.Control::automatic);
-        ctrl_y.SetMode(ctrl_y.Control::automatic);
-
-        // Reset trajectory progress
-        s = 0.0;
-        traj_start_time = micros()*1e-6; // Start time of the movement
-
-        // Serial.println("INIT POS");
-        ctrl_phase = CTRL_PHASE_POSITION;
-      break;
-      case CTRL_PHASE_POSITION:
-        if(dst(position_robot, position_fin) <= 0.05){
-          ctrl_x.SetMode(ctrl_x.Control::manual);
-          ctrl_y.SetMode(ctrl_y.Control::manual);
-
-          ctrl_phase = CTRL_PHASE_INIT_ORIENT_FINAL;
-        }else controller_position(angspd);
-
-        // Serial.println("POS");
-      break;
-      case CTRL_PHASE_INIT_ORIENT_FINAL:
-        ctrl_orient.Initialize();
-        ctrl_orient.SetMode(ctrl_orient.Control::automatic);
-
-        ctrl_phase = CTRL_PHASE_ORIENT_FINAL;
-        Serial.println("INIT ORIENT");
-      break;
-      case CTRL_PHASE_ORIENT_FINAL:
-        // Serial.println("ORIENT");
-        
-        double d1 = angle_diff(position_robot.theta, position_fin.theta);
-        double d2 = TWO_PI - d1;
-        double d = -min(d1, d2);
-        
-        pos_orient = d;
-        setpoint_orient = 0;
-        if(abs(d) <= radians(3)){
-          ctrl_orient.SetMode(ctrl_orient.Control::manual);
-          ctrl_phase = CTRL_PHASE_IDLE;
-        } else controller_orient(angspd); 
-      break;
-    }
-    
-    set_left_wheel_angspd(angspd[1]);
-    set_right_wheel_angspd(angspd[0]);
+        ctrl_phase = CTRL_PHASE_IDLE;
+      } else controller_orient(angspd); 
+    break;
   }
+  
+  set_left_wheel_angspd(angspd[1]);
+  set_right_wheel_angspd(angspd[0]);
+  timer_position_update = 0;
 }
 
 void controller_position(double output[]){
-  float tf = micros()*1e-6;
+  float tf = timer_position_ctrl*1e-3;
 
   // position feedback with "off center" points
   pos_x = position_robot.x + B_FROM_CENTER*cos(position_robot.theta);
@@ -138,18 +142,18 @@ void controller_position(double output[]){
   float T = (L*A_MAX + V_MAX*V_MAX)/(V_MAX*A_MAX);
 
   // A_MAX = V_MAX / Ts;
-  if (tf - traj_start_time <= Ts && tf - traj_start_time >= 0){
+  if (tf<= Ts && tf>= 0){
 
     s_dot = A_MAX*(tf - traj_start_time)/L;
-    s = A_MAX * (tf - traj_start_time) * (tf - traj_start_time) / (2*L);
+    s = A_MAX * tf*tf / (2*L);
   }
-  else if (tf - traj_start_time <= T -Ts && tf - traj_start_time > Ts){
+  else if (tf<= T -Ts && tf> Ts){
     s_dot = A_MAX * Ts / L;
-    s = A_MAX * Ts * (tf - traj_start_time - Ts)/L + A_MAX * Ts * Ts / (2*L);
+    s = A_MAX * Ts * (tf- Ts)/L + A_MAX * Ts * Ts / (2*L);
   }
-  else if (tf - traj_start_time <= T && tf - traj_start_time > T - Ts){
-    s_dot = A_MAX*(T - tf + traj_start_time)/L;
-    s = A_MAX*T * (tf - traj_start_time - T + Ts)/L - A_MAX * (((tf-traj_start_time)*(tf-traj_start_time) - (T-Ts)*(T-Ts)) / (2*L)) + A_MAX * Ts *(T-Ts - Ts)/L + A_MAX * Ts * Ts / (2*L);
+  else if (tf<= T && tf> T - Ts){
+    s_dot = A_MAX*(T - tf)/L;
+    s = A_MAX*T * (tf- T + Ts)/L - A_MAX * ((tf*tf - (T-Ts)*(T-Ts)) / (2*L)) + A_MAX * Ts *(T-Ts - Ts)/L + A_MAX * Ts * Ts / (2*L);
   }
   else s_dot = 0;
 
