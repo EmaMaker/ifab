@@ -67,15 +67,19 @@ void wifi_receive(){
       Serial.println(error.c_str());
       return;
     }
- 
-    // Extract the JSON objects
-    double robot_x = doc["robot"][0];
-    double robot_y = doc["robot"][1];
-    double robot_theta = doc["robot"][2];
+    
+    if(doc.containsKey("robot")){
+      // Extract the JSON objects
+      double robot_x = doc["robot"][0];
+      double robot_y = doc["robot"][1];
+      double robot_theta = doc["robot"][2];
+    }
   
-    double target_x = doc["target"][0];
-    double target_y = doc["target"][1];
-    double target_theta = doc["target"][2];
+    if(doc.containsKey("target")){
+      double target_x = doc["target"][0];
+      double target_y = doc["target"][1];
+      double target_theta = doc["target"][2];
+    }
 
     Serial.println(robot_x);
     Serial.println(robot_y);
