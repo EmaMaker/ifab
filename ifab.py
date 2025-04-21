@@ -1,7 +1,7 @@
 import json
 import socket
 
-from vision.aruco_quadrilateral_transformer import ArUcoQuadrilateralTransformer
+from vision.vision import Vision
 
 CLIENT_1 = "ifab.local"
 CLIENT_PORT = 4242
@@ -39,7 +39,7 @@ if __name__ == '__main__':
         corners_ids = [d['table']['aruco']['top-left'], d['table']['aruco']['top-right'], d['table']['aruco']['bottom-right'], d['table']['aruco']['bottom-left']]
         # TODO: Camera index dinamico con il nome della camera, vedi aruco-read
 
-        transformer = ArUcoQuadrilateralTransformer(camera_index=d["cameraIndex"], marker_corners_ids=corners_ids,
+        transformer = Vision(camera_index=d["cameraIndex"], marker_corners_ids=corners_ids,
                                                     robot=d['robot'], macchinari=d['macchinari'],
-                                                    sendToRobot=send_to_robot)
+                                                    sendToRobot=send_to_robot, display=True)
         transformer.run()
