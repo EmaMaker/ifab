@@ -58,17 +58,14 @@ void update_position_ctrl(){
   odometric_localization(&new_position, &position_robot);
   position_robot = new_position;
 
-  
-
   Serial.print("X: ");
   Serial.print(position_robot.x);
   Serial.print(" | Y: ");
   Serial.print(position_robot.y);
   Serial.print(" | T: ");
   Serial.println(position_robot.theta);  
-  
-  switch(ctrl_phase){
-    case CTRL_PHASE_IDLE:
+
+  if(ctrl_phase == CTRL_PHASE_IDLE){
       ctrl_x.SetMode(ctrl_x.Control::manual);
       ctrl_y.SetMode(ctrl_y.Control::manual);
       ctrl_orient.SetMode(ctrl_orient.Control::manual);
@@ -76,52 +73,54 @@ void update_position_ctrl(){
       angspd[0] = 0;
       angspd[1] = 0;
       // Serial.println("IDLE");
-    break;
-    case CTRL_PHASE_INIT_POSITION:
-      ctrl_x.Initialize();
-      ctrl_y.Initialize();
-      ctrl_x.SetMode(ctrl_x.Control::automatic);
-      ctrl_y.SetMode(ctrl_y.Control::automatic);
+  }
+  if(ctrl_phase == CTRL_PHASE_INIT_POSITION){
+    ctrl_x.Initialize();
+    ctrl_y.Initialize();
+    ctrl_x.SetMode(ctrl_x.Control::automatic);
+    ctrl_y.SetMode(ctrl_y.Control::automatic);
 
-      // Reset trajectory progress
-      s = 0.0;
-      traj_start_time = 0; // Start time of the movement
-      timer_position_ctrl = 0;
+    // Reset trajectory progress
+    s = 0.0;
+    traj_start_time = 0; // Start time of the movement
+    timer_position_ctrl = 0;
 
-      // Serial.println("INIT POS");
-      ctrl_phase = CTRL_PHASE_POSITION;
-    break;
-    case CTRL_PHASE_POSITION:
-      if(dst(position_robot, position_fin) <= 0.05){
-        ctrl_x.SetMode(ctrl_x.Control::manual);
-        ctrl_y.SetMode(ctrl_y.Control::manual);
+    Serial.println("INIT POS");
+    ctrl_phase = CTRL_PHASE_POSITION;  
+  }
+  if(ctrl_phase == CTRL_PHASE_POSITION){
+    if(dst(position_robot, position_fin) <= 0.05){
+      ctrl_x.SetMode(ctrl_x.Control::manual);
+      ctrl_y.SetMode(ctrl_y.Control::manual);
 
-        ctrl_phase = CTRL_PHASE_INIT_ORIENT_FINAL;
-      }else controller_position(angspd);
-
+      ctrl_phase = CTRL_PHASE_INIT_ORIENT_FINAL;
+    }else controller_position(angspd);
+  }
       // Serial.println("POS");
-    break;
-    case CTRL_PHASE_INIT_ORIENT_FINAL:
-      ctrl_orient.Initialize();
-      ctrl_orient.SetMode(ctrl_orient.Control::automatic);
+  if (ctrl_phase == CTRL_PHASE_INIT_ORIENT_FINAL){
+    ctrl_orient.Initialize();
+    ctrl_orient.SetMode(ctrl_orient.Control::automatic);
 
-      ctrl_phase = CTRL_PHASE_ORIENT_FINAL;
+    ctrl_phase = CTRL_PHASE_ORIENT_FINAL;
       Serial.println("INIT ORIENT");
-    break;
-    case CTRL_PHASE_ORIENT_FINAL:
+  }
+  if (ctrl_phase == CTRL_PHASE_ORIENT_FINAL){
       // Serial.println("ORIENT");
       
-      double d1 = angle_diff(position_robot.theta, position_fin.theta);
-      double d2 = TWO_PI - d1;
-      double d = -min(d1, d2);
-      
-      pos_orient = d;
-      setpoint_orient = 0;
-      if(abs(d) <= radians(3)){
-        ctrl_orient.SetMode(ctrl_orient.Control::manual);
-        ctrl_phase = CTRL_PHASE_IDLE;
-      } else controller_orient(angspd); 
-    break;
+    double d1 = angle_diff(position_robot.theta, position_fin.theta);
+    double d2 = TWO_PI - d1;
+    double d = -min(d1, d2);
+    
+    pos_orient = d;
+    setpoint_orient = 0;
+    if(abs(d) <= radians(5)){
+      ctrl_orient.SetMode(ctrl_orient.Control::manual);
+      ctrl_phase = CTRL_PHASE_IDLE;
+
+      // Turn off motors when becoming idle
+      angspd[0] = 0;
+      angspd[1] = 0;
+    } else controller_orient(angspd); 
   }
   
   set_left_wheel_angspd(angspd[1]);
