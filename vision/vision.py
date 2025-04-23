@@ -63,7 +63,6 @@ class PerspectiveTransformer:
         
         # Apply perspective transform
         warped = cv2.warpPerspective(frame, matrix, output_size)
-        cv2.imshow('warped', warped)
         
         return warped, matrix
 
@@ -274,9 +273,9 @@ class Vision:
                 self.marker_centers[idx] = [center_x, center_y]
         
         for index, cornerIds in enumerate(self.marker_corners_ids):
-            quad_corners[index] = cornerIds
+            quad_corners[index] = self.marker_centers[self.marker_corners_ids.index(cornerIds)]
          # format return information as matrix vector
-            
+        
 
         # Draw detected markers if display is enabled
         if display:
