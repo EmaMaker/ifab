@@ -2,7 +2,7 @@ import socket
 
 # socket setup
 
-CLIENT_1 = "ifab.local"
+CLIENT_1 = "10.42.0.200"
 CLIENT_PORT = 4242
 # Posizioni in metri angoli in radianti
 MESSAGE = b"""

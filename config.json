@@ -1,18 +1,18 @@
 {
   "cameraIndex": 0,
   "table": {
+    "width": 1.09,
+    "height": 0.67,
     "aruco": {
       "top-left": 10,
       "top-right": 12,
       "bottom-left": 16,
       "bottom-right": 14
-    },
-    "width": 1.09,
-    "height": 0.67
+    }
   },
   "robot": {
     "aruco": 18,
-    "x_offset": 2,
+    "x_offset": 0.05,
     "y_offset": 0,
     "theta_offset": 0
   },

@@ -117,9 +117,11 @@ class MarkerPoseCalculator:
         self.scale_x = self.width / self.output_size[0]
         self.scale_y = self.height / self.output_size[1]
 
-    def calculate_marker_pose(self, field_corner_center: np.ndarray, current_marker_corners: np.ndarray, matrix: np.ndarray) -> Tuple[float, float, float, float, float]:
+    def calculate_marker_pose(self, current_marker_corners: np.ndarray, matrix: np.ndarray) -> Tuple[float, float, float, float, float]:
         """Calculates the transformed position (cm) and angle (radians) of a marker."""
         # Calculate center of the marker in original frame
+
+
         center_x = np.mean(current_marker_corners[:, 0])
         center_y = np.mean(current_marker_corners[:, 1])
         marker_center_orig = np.array([center_x, center_y, 1.0])
@@ -131,7 +133,7 @@ class MarkerPoseCalculator:
 
         # Convert pixel coordinates to cm from top-left of warped image
         pos_x = (transformed_x_px) * self.scale_x
-        pos_y = (transformed_y_px) * self.scale_y
+        pos_y = self.height - ((transformed_y_px) * self.scale_y) # Invertiamo l'asse y per ottenere un sistema di riferimento destro (origine in basso)
 
         # Calculate the orientation angle of the marker in the original frame
         v_orientation = current_marker_corners[1] - current_marker_corners[0]
@@ -150,8 +152,10 @@ class MarkerPoseCalculator:
         tp1_norm = tp1 / tp1[2]
         tp2_norm = tp2 / tp2[2]
 
-        # Calculate the angle of the vector between the transformed points
-        transformed_angle_rad = np.arctan2(tp2_norm[1] - tp1_norm[1], tp2_norm[0] - tp1_norm[0])
+        # Calcola l'angolo invertendo la direzione dell'asse Y per mantenere
+        # coerenza con il sistema di riferimento destro (origine in basso)
+        # usato per le coordinate
+        transformed_angle_rad = np.arctan2(-(tp2_norm[1] - tp1_norm[1]), tp2_norm[0] - tp1_norm[0])
 
         return pos_x, pos_y, transformed_angle_rad, transformed_x_px, transformed_y_px
 
@@ -167,9 +171,9 @@ class MarkerPoseCalculator:
         final_y = y + offset_x * np.sin(angle_rad) + offset_y * np.cos(angle_rad)
 
         # Add angle offset and normalize to [-pi, pi]
-        final_angle = angle_rad + offset_theta
-        final_angle = (final_angle + np.pi) % (2 * np.pi) - np.pi
-
+        final_angle = (angle_rad + offset_theta + 2 * np.pi) % (2 * np.pi)
+        if final_angle > np.pi:
+            final_angle -= 2 * np.pi
         return final_x, final_y, final_angle
 
 
@@ -214,7 +218,7 @@ class Visualizer:
         # Draw orientation line
         line_length = 30
         end_x = int(trans_x_px + line_length * np.cos(angle_rad))
-        end_y = int(trans_y_px + line_length * np.sin(angle_rad))
+        end_y = int(trans_y_px + line_length * np.sin(-angle_rad)) # Inverti Y per via del sistema Sinistro in visualizzazione
         cv2.line(warped, center_px, (end_x, end_y), (0, 255, 0), 2)
 
         # # Draw target orientation line
@@ -230,7 +234,7 @@ class Visualizer:
             display_name = f"{macchinari_id_to_key[marker_id]} ({marker_id})"
 
         pos_text = f"Pos: ({pos_x * 100:.1f}, {pos_y * 100:.1f})cm"
-        angle_text = f"Ang: {angle_deg:.1f} deg"
+        angle_text = f"Ang: {angle_deg:.1f} deg; {angle_rad:.2f} rad"
 
         cv2.putText(warped, display_name, (center_px[0] + 10, center_px[1]), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 0), 1)
         cv2.putText(warped, pos_text, (center_px[0] + 10, center_px[1] + 15), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 0), 1)
@@ -413,7 +417,7 @@ class Vision:
 
             # Calculate base pose
             try:
-                pos_x, pos_y, angle_rad, trans_x_px, trans_y_px = self.pose_calculator.calculate_marker_pose(field_center_corners, current_aruco_corners, matrix)
+                pos_x, pos_y, angle_rad, trans_x_px, trans_y_px = self.pose_calculator.calculate_marker_pose(current_aruco_corners, matrix)
             except Exception as e:
                 print(f"Error calculating pose for marker {marker_id}: {e}")
                 continue

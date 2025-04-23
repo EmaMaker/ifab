@@ -3,7 +3,7 @@ import socket
 
 from vision.vision import Vision
 
-CLIENT_1 = "ifab.local"
+CLIENT_1 = "10.42.0.200"
 CLIENT_PORT = 4242
 
 # Memoria per i dati più recenti
@@ -59,8 +59,8 @@ def send_to_robot(data: dict):
             'theta': memory['markers'][targetMachina]["angle"]
         }
 
-    print("Sending data to robot:", data)
-    print('toSend:', toSend)
+    print("Data receve from Camera:", data)
+    print('Data Send to robot:', toSend)
 
     # Invia i dati usando la socket solo se c'è qualcosa da inviare
     if toSend:
@@ -68,8 +68,8 @@ def send_to_robot(data: dict):
             s = get_socket()
             if s:
                 json_data = json.dumps(toSend, indent=0).replace("\n", "")
-                bytes_data = json_data.encode('utf-8')
-                s.sendto(bytes_data, (CLIENT_1, CLIENT_PORT))
+                bytes_data = json_data.encode('utf-8')  + b'\0'
+                # s.sendto(bytes_data, (CLIENT_1, CLIENT_PORT))
         except Exception as e:
             print(f"Errore nell'invio dei dati: {e}")
             # Resetta la socket in caso di errore
