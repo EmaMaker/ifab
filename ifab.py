@@ -29,7 +29,7 @@ def send_to_robot(data: dict):
     print('toSent', toSend)
     json_data = json.dumps(data, indent=0).replace("\n", "")
     bytes_data = json_data.encode('utf-8')
-    sock.sendto(bytes_data, (CLIENT_1, CLIENT_PORT))
+    # sock.sendto(bytes_data, (CLIENT_1, CLIENT_PORT))
 
 
 # Example usage

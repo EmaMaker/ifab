@@ -223,7 +223,7 @@ class Vision:
         self.frame_height = int(self.cam.get(cv2.CAP_PROP_FRAME_HEIGHT))
         
         # Initialize helper components
-        self.aruco_detector = ArucoDetector(aruco_dict_type)
+        self.aruco_detector = ArUcoDetector(aruco_dict_type)
         self.pose_calculator = MarkerPoseCalculator(width_cm, height_cm, output_size)
         
         # Expected marker IDs for the four corners
