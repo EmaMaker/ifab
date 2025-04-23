@@ -41,6 +41,9 @@ class PerspectiveTransformer:
     @staticmethod
     def transform_perspective(frame: np.ndarray, corners: np.ndarray, output_size: Tuple[int, int]) -> Tuple[np.ndarray, np.ndarray]:
         """Applies perspective transform to the frame based on detected corners."""
+
+        if corners is None or len(corners) != 4:
+            raise ValueError("Corners are None. Cannot perform perspective transform.")
         # Get ordered source points
         src_pts = PerspectiveTransformer.order_points(corners.astype(np.float32))
         
@@ -253,7 +256,7 @@ class Vision:
                 cv2.imshow(self.window_name, frame)
             return None
         
-        quad_corners = np.zeros((4, 2), dtype=np.float32)
+        # quad_corners = np.zeros((4, 2), dtype=np.float32)
         # self.marker_centers = {}
         
         # Map detected markers to their expected positions
@@ -264,8 +267,8 @@ class Vision:
                 center_x = np.mean(marker_corners_raw[:, 0])
                 center_y = np.mean(marker_corners_raw[:, 1])
                 
-                quad_corners[idx] = [center_x, center_y]
-                self.marker_centers[idx] = (center_x, center_y)
+                # quad_corners[idx] = [center_x, center_y]
+                self.marker_centers[idx] = np.array([center_x, center_y])
       
         # Draw detected markers if display is enabled
         if display:
@@ -287,7 +290,7 @@ class Vision:
             raise IOError("Error: Could not read frame from camera.")
         return frame
     
-    def process_frame(self, frame: Optional[np.ndarray] = None, display: bool = True) -> Tuple[Dict[str, Any], Optional[np.ndarray]]:
+    def process_frame(self, frame: Optional[np.ndarray] = None, display: bool = True):
         """
         Processes a frame to find the quadrilateral and internal markers.
         Can optionally display visualization and return the processed frame.
@@ -297,46 +300,27 @@ class Vision:
             display: Whether to display visualization windows.
             
         Returns:
-            A tuple containing:
-            - Dictionary with processed marker data
-            - Processed frame with visualizations (if display=True) or None
+            Nothing, to share information we use callback
         """
         # Capture frame if not provided
         if frame is None or not isinstance(frame, np.ndarray):
             raise ValueError("Invalid frame provided.")
-
-        # Find quadrilateral corners
-        corners = self.find_quadrilateral(frame, display=display)
-        
-        # Update last known good corners if found
-        if corners is not None:
-            self.last_good_corners = corners
-        
-        # If we don't have valid corners, cannot proceed with transformation
-        if self.last_good_corners is None:
-            if display:
-                cv2.imshow(self.warped_window_name, frame)
-            return {}, frame if display else None
-        
-        # Detect all ArUco markers in the frame
-        all_corners, all_ids, rejected = self.aruco_detector.detect_markers(frame)
-        
-        # If no markers detected at all, return empty data
-        if all_ids is None:
-            if display:
-                cv2.imshow(self.warped_window_name, frame)
-            return {}, frame if display else None
         
         # Calculate the perspective transform matrix
         try:
-            warped, matrix = PerspectiveTransformer.transform_perspective(
-                frame, self.last_good_corners, self.output_size)
+            # Find quadrilateral corners
+            corners = self.find_quadrilateral(frame, display=display)
+            warped, matrix = PerspectiveTransformer.transform_perspective(frame, corners, self.output_size)
         except Exception as e:
             print(f"Error calculating perspective transform: {e}")
             if display:
                 cv2.imshow(self.warped_window_name, frame)
             return {}, frame if display else None
         
+        all_corners, all_ids, rejected = self.aruco_detector.detect_markers(frame)
+        if all_ids is None:
+            raise ValueError("No markers detected.")
+
         # Prepare result structure
         result = {
             'markers': {},
@@ -357,8 +341,7 @@ class Vision:
             
             # Calculate base pose
             try:
-                pos_x_cm, pos_y_cm, angle_rad, trans_x_px, trans_y_px = self.pose_calculator.calculate_marker_pose(
-                    marker_corners, matrix)
+                pos_x_cm, pos_y_cm, angle_rad, trans_x_px, trans_y_px = self.pose_calculator.calculate_marker_pose(marker_corners, matrix)
             except Exception as e:
                 print(f"Error calculating pose for marker {marker_id}: {e}")
                 continue
@@ -366,16 +349,13 @@ class Vision:
             # Apply offsets based on marker type
             final_x_cm, final_y_cm, final_angle_rad = pos_x_cm, pos_y_cm, angle_rad
             is_robot = False
-            
+
             if marker_id == self.robot_config.get("aruco"):
-                final_x_cm, final_y_cm, final_angle_rad = MarkerPoseCalculator.apply_offset(
-                    pos_x_cm, pos_y_cm, angle_rad, self.robot_config)
+                final_x_cm, final_y_cm, final_angle_rad = MarkerPoseCalculator.apply_offset(pos_x_cm, pos_y_cm, angle_rad, self.robot_config)
                 is_robot = True
             elif marker_id in self.macchinari_id_to_key:
-                machine_key = self.macchinari_id_to_key[marker_id]
-                machine_config = self.macchinari_config.get(machine_key, {})
-                final_x_cm, final_y_cm, final_angle_rad = MarkerPoseCalculator.apply_offset(
-                    pos_x_cm, pos_y_cm, angle_rad, machine_config)
+                machine_config = self.macchinari_config.get(self.macchinari_id_to_key[marker_id], {})
+                final_x_cm, final_y_cm, final_angle_rad = MarkerPoseCalculator.apply_offset(pos_x_cm, pos_y_cm, angle_rad, machine_config)
             
             # Store marker data
             marker_data = {
@@ -397,19 +377,14 @@ class Vision:
                 warped = Visualizer.draw_marker_info(
                     warped, marker_id, pos_x_cm, pos_y_cm, angle_rad, trans_x_px, trans_y_px,
                     self.robot_config, self.macchinari_id_to_key)
+                cv2.imshow(self.warped_window_name, warped)
         
         # Send data if new data was processed and callback exists
         if newData and self.sendToRobot:
             try:
-                self.sendToRobot(result)
+                self.sendToRobot(result) # send infornation using callback
             except Exception as e:
                 print(f"Error calling sendToRobot callback: {e}")
-        
-        # Display the final warped image if requested
-        if display:
-            cv2.imshow(self.warped_window_name, warped)
-        
-        return result, warped if display else None
     
     def get_robot_pose(self, frame: Optional[np.ndarray] = None) -> Optional[Dict[str, Any]]:
         """Gets the current pose of the robot marker."""
@@ -434,9 +409,10 @@ class Vision:
             try:
                 frame = self.get_frame()
                 self.process_frame(frame, display=self.display)
-            except IOError as e:
+            except (IOError, ValueError) as e:
                 print(f"Error getting frame: {e}")
                 continue
+            
     
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 print("Exit key 'q' pressed.")
