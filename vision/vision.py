@@ -231,8 +231,8 @@ class Vision:
         self.pose_calculator = MarkerPoseCalculator(width_cm, height_cm, output_size)
         
         # Expected marker IDs for the four corners
-        if len(marker_corners_ids) != 4:
-            raise ValueError("marker_corners_ids must contain exactly four IDs.")
+        if len(set(marker_corners_ids)) != 4:
+            raise ValueError("marker_corners_ids must be 4 unique IDs.")
         self.marker_corners_ids = marker_corners_ids
         
         # Window names
@@ -254,11 +254,11 @@ class Vision:
         if ids is None:
             if display:
                 cv2.imshow(self.window_name, frame)
-            return None
+            raise ValueError("No ArUco markers detected.")
         
-        # quad_corners = np.zeros((4, 2), dtype=np.float32)
         # self.marker_centers = {}
-        
+        quad_corners = np.zeros((4, 2), dtype=np.float32)
+
         # Map detected markers to their expected positions
         for i, marker_id in enumerate(ids.flatten()):
             if marker_id in self.marker_corners_ids:
@@ -266,22 +266,24 @@ class Vision:
                 marker_corners_raw = corners[i][0]
                 center_x = np.mean(marker_corners_raw[:, 0])
                 center_y = np.mean(marker_corners_raw[:, 1])
-                
-                # quad_corners[idx] = [center_x, center_y]
-                self.marker_centers[idx] = np.array([center_x, center_y])
-      
+                # Update marker_centers stored information with the new found center
+                self.marker_centers[idx] = [center_x, center_y]
+        
+        for index, cornerIds in enumerate(self.marker_corners_ids):
+            quad_corners[index] = cornerIds
+         # format return information as matrix vector
+            
+
         # Draw detected markers if display is enabled
         if display:
             display_frame = frame.copy()
             cv2.aruco.drawDetectedMarkers(display_frame, corners, ids)
-            
             if len(self.marker_centers) > 1:
                 display_frame = Visualizer.draw_quadrilateral(display_frame, self.marker_centers)
-            
             cv2.imshow(self.window_name, display_frame)
         
         # Return corners only if all four are found
-        return self.marker_centers if len(self.marker_centers) == 4 else None
+        return quad_corners if len(self.marker_centers) == 4 else None
 
     def get_frame(self) -> np.ndarray:
         """Captures and returns a frame from the camera."""
@@ -385,6 +387,9 @@ class Vision:
                 self.sendToRobot(result) # send infornation using callback
             except Exception as e:
                 print(f"Error calling sendToRobot callback: {e}")
+
+        # Return the processed frame if display is enabled
+        return result, warped if display else None
     
     def get_robot_pose(self, frame: Optional[np.ndarray] = None) -> Optional[Dict[str, Any]]:
         """Gets the current pose of the robot marker."""
