@@ -213,6 +213,7 @@ class Vision:
         self.width_cm = width_cm
         self.height_cm = height_cm
         self.display = display
+        self.marker_centers = {}
         
         # Initialize camera
         self.cam = cv2.VideoCapture(self.camera_index)
@@ -253,24 +254,19 @@ class Vision:
             return None
         
         quad_corners = np.zeros((4, 2), dtype=np.float32)
-        found_markers_count = 0
-        marker_centers = {}
+        # self.marker_centers = {}
         
         # Map detected markers to their expected positions
         for i, marker_id in enumerate(ids.flatten()):
             if marker_id in self.marker_corners_ids:
-                try:
-                    idx = self.marker_corners_ids.index(marker_id)
-                    marker_corners_raw = corners[i][0]
-                    center_x = np.mean(marker_corners_raw[:, 0])
-                    center_y = np.mean(marker_corners_raw[:, 1])
-                    
-                    quad_corners[idx] = [center_x, center_y]
-                    marker_centers[idx] = (center_x, center_y)
-                    found_markers_count += 1
-                except ValueError:
-                    print(f"Warning: Marker ID {marker_id} found but not in expected list index.")
-        
+                idx = self.marker_corners_ids.index(marker_id)
+                marker_corners_raw = corners[i][0]
+                center_x = np.mean(marker_corners_raw[:, 0])
+                center_y = np.mean(marker_corners_raw[:, 1])
+                
+                quad_corners[idx] = [center_x, center_y]
+                self.marker_centers[idx] = (center_x, center_y)
+      
         # Draw detected markers if display is enabled
         if display:
             display_frame = frame.copy()
@@ -282,7 +278,14 @@ class Vision:
             cv2.imshow(self.window_name, display_frame)
         
         # Return corners only if all four are found
-        return quad_corners if found_markers_count == 4 else None
+        return self.marker_centers if len(self.marker_centers) == 4 else None
+
+    def get_frame(self) -> np.ndarray:
+        """Captures and returns a frame from the camera."""
+        ret, frame = self.cam.read()
+        if not ret:
+            raise IOError("Error: Could not read frame from camera.")
+        return frame
     
     def process_frame(self, frame: Optional[np.ndarray] = None, display: bool = True) -> Tuple[Dict[str, Any], Optional[np.ndarray]]:
         """
@@ -299,12 +302,9 @@ class Vision:
             - Processed frame with visualizations (if display=True) or None
         """
         # Capture frame if not provided
-        if frame is None:
-            ret, frame = self.cam.read()
-            if not ret:
-                print("Error: Could not read frame from camera.")
-                return {}, None
-        
+        if frame is None or not isinstance(frame, np.ndarray):
+            raise ValueError("Invalid frame provided.")
+
         # Find quadrilateral corners
         corners = self.find_quadrilateral(frame, display=display)
         
@@ -431,13 +431,13 @@ class Vision:
         cv2.namedWindow(self.warped_window_name)
         
         while True:
-            ret, frame = self.cam.read()
-            if not ret:
-                print("Error: End of video stream or cannot read frame.")
-                break
-            
-            self.process_frame(frame, display=self.display)
-            
+            try:
+                frame = self.get_frame()
+                self.process_frame(frame, display=self.display)
+            except IOError as e:
+                print(f"Error getting frame: {e}")
+                continue
+    
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 print("Exit key 'q' pressed.")
                 break
