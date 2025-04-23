@@ -3,10 +3,12 @@ import socket
 
 from vision.vision import Vision
 
-# CLIENT_1 = "10.42.0.200"
+# CLIENT_1 = "ifab.local"
 # CLIENT_PORT = 4242
-CLIENT_1 = "10.42.0.159"
-CLIENT_PORT = 47269
+CLIENT_1 = "10.42.0.200"
+CLIENT_PORT = 4242
+# CLIENT_1 = "10.42.0.159"
+# CLIENT_PORT = 47269
 
 # Memoria per i dati più recenti
 memory = {
