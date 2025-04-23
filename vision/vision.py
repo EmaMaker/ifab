@@ -389,7 +389,7 @@ class Vision:
                 print(f"Error calling sendToRobot callback: {e}")
 
         # Return the processed frame if display is enabled
-        return result, warped if display else None
+        return
     
     def get_robot_pose(self, frame: Optional[np.ndarray] = None) -> Optional[Dict[str, Any]]:
         """Gets the current pose of the robot marker."""
@@ -414,15 +414,16 @@ class Vision:
             try:
                 frame = self.get_frame()
                 self.process_frame(frame, display=self.display)
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    print("Exit key 'q' pressed.")
+                    break
+        
             except (IOError, ValueError) as e:
                 print(f"Error getting frame: {e}")
                 continue
             
     
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                print("Exit key 'q' pressed.")
-                break
-        
+            
         self.cleanup()
     
     def cleanup(self):
