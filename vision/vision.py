@@ -1,3 +1,4 @@
+import tkinter as tk
 from typing import Callable, Optional, Tuple, List, Dict, Any
 
 import cv2
@@ -60,7 +61,7 @@ class PerspectiveTransformer:
         return rect
 
     @staticmethod
-    def transform_perspective(frame: np.ndarray, corners: np.ndarray, output_size: Tuple[int, int]) -> Tuple[np.ndarray, np.ndarray]:
+    def transform_perspective(frame: np.ndarray, corners: np.ndarray, wrapped_output_size: Tuple[int, int]) -> Tuple[np.ndarray, np.ndarray]:
         """Applies perspective transform to the frame based on detected corners."""
 
         if corners is None:
@@ -87,9 +88,9 @@ class PerspectiveTransformer:
         # Define destination points for the transform
         dst_pts = np.array([
             [0, 0],
-            [output_size[0], 0],
-            [output_size[0], output_size[1]],
-            [0, output_size[1]]
+            [wrapped_output_size[0], 0],
+            [wrapped_output_size[0], wrapped_output_size[1]],
+            [0, wrapped_output_size[1]]
         ], dtype=np.float32)
 
         # Verifica presenza di NaN o infiniti
@@ -102,7 +103,7 @@ class PerspectiveTransformer:
         matrix = cv2.getPerspectiveTransform(src_pts, dst_pts)
 
         # Apply perspective transform
-        warped = cv2.warpPerspective(frame, matrix, output_size)
+        warped = cv2.warpPerspective(frame, matrix, wrapped_output_size)
 
         return warped, matrix
 
@@ -121,7 +122,6 @@ class MarkerPoseCalculator:
         """Calculates the transformed position (cm) and angle (radians) of a marker."""
         # Calculate center of the marker in original frame
 
-
         center_x = np.mean(current_marker_corners[:, 0])
         center_y = np.mean(current_marker_corners[:, 1])
         marker_center_orig = np.array([center_x, center_y, 1.0])
@@ -133,7 +133,7 @@ class MarkerPoseCalculator:
 
         # Convert pixel coordinates to cm from top-left of warped image
         pos_x = (transformed_x_px) * self.scale_x
-        pos_y = self.height - ((transformed_y_px) * self.scale_y) # Invertiamo l'asse y per ottenere un sistema di riferimento destro (origine in basso)
+        pos_y = self.height - ((transformed_y_px) * self.scale_y)  # Invertiamo l'asse y per ottenere un sistema di riferimento destro (origine in basso)
 
         # Calculate the orientation angle of the marker in the original frame
         v_orientation = current_marker_corners[1] - current_marker_corners[0]
@@ -218,7 +218,7 @@ class Visualizer:
         # Draw orientation line
         line_length = 30
         end_x = int(trans_x_px + line_length * np.cos(angle_rad))
-        end_y = int(trans_y_px + line_length * np.sin(-angle_rad)) # Inverti Y per via del sistema Sinistro in visualizzazione
+        end_y = int(trans_y_px + line_length * np.sin(-angle_rad))  # Inverti Y per via del sistema Sinistro in visualizzazione
         cv2.line(warped, center_px, (end_x, end_y), (0, 255, 0), 2)
 
         # # Draw target orientation line
@@ -266,35 +266,40 @@ class Vision:
                  sendToRobot: Optional[Callable[[Dict[str, Any]], None]] = None,
                  display: bool = True):
         """Initializes the ArUcoQuadrilateralTransformer."""
-        self.camera_index = camera_index
+        # Real Fields parameters
         self.width = width
         self.height = height
-        self.output_size = (int(px_windows_height * (self.width / self.height)), px_windows_height)
-
-        self.display = display
         self.field_marker_centers = {}
 
-        # Initialize camera
+        # OpenCV display data
+        self.display = display # Enable disable frame view
+        root = tk.Tk()  # Get current monitor information using tkinter
+        self.screen_width = root.winfo_screenwidth()
+        self.screen_height = root.winfo_screenheight()
+        root.destroy()
+
+        # Window names
+        self.window_name = 'ArUco Detection View'
+        self.warped_window_name = 'Transformed View'
+        self.warped_output_size = (int(px_windows_height * (self.width / self.height)), px_windows_height)
+        self.last_good_warped = None
+
+        # Camera settings
+        self.camera_index = camera_index
         self.cam = cv2.VideoCapture(self.camera_index)
         if not self.cam.isOpened():
             raise IOError(f"Cannot open camera with index {self.camera_index}")
-
         self.frame_width = int(self.cam.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.frame_height = int(self.cam.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
         # Initialize helper components
         self.aruco_detector = ArUcoDetector(aruco_dict_type)
-        self.pose_calculator = MarkerPoseCalculator(self.width, self.height, self.output_size)
+        self.pose_calculator = MarkerPoseCalculator(self.width, self.height, self.warped_output_size)
 
         # Expected marker IDs for the four corners
         if len(set(marker_corners_ids)) != 4:
             raise ValueError("marker_corners_ids must be 4 unique IDs.")
         self.marker_corners_ids = marker_corners_ids
-
-        # Window names
-        self.window_name = 'ArUco Detection View'
-        self.warped_window_name = 'Transformed View'
-        self.last_good_warped = None
 
         # Store configuration for robot and machines
         self.robot_config = robot
@@ -363,7 +368,7 @@ class Vision:
         try:
             # Find quadrilateral field_center_corners
             field_center_corners = self.find_quadrilateral(frame, display=display)
-            warped, matrix = PerspectiveTransformer.transform_perspective(frame, field_center_corners, self.output_size)
+            warped, matrix = PerspectiveTransformer.transform_perspective(frame, field_center_corners, self.warped_output_size)
             # Save the last good warped frame
             self.last_good_warped = warped.copy()
         except Exception as e:
@@ -489,7 +494,11 @@ class Vision:
         """Starts the main processing loop."""
         cv2.namedWindow(self.window_name)
         cv2.namedWindow(self.warped_window_name)
-
+        # Posiziona le finestre affiancate per evitare sovrapposizioni
+        cv2.moveWindow(self.window_name, 20, 20)  # Prima finestra a sinistra
+        # Posiziona la seconda finestra allineata al bordo destro dello schermo
+        cv2.moveWindow(self.warped_window_name, self.screen_width - self.warped_output_size[0] - 20,
+                       self.screen_height - self.warped_output_size[1] - 20)  # Finestra allineata a destra
         while True:
             try:
                 frame = self.get_frame()
