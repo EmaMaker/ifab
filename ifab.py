@@ -69,7 +69,7 @@ def send_to_robot(data: dict):
             if s:
                 json_data = json.dumps(toSend, indent=0).replace("\n", "")
                 bytes_data = json_data.encode('utf-8')  + b'\0'
-                # s.sendto(bytes_data, (CLIENT_1, CLIENT_PORT))
+                s.sendto(bytes_data, (CLIENT_1, CLIENT_PORT))
         except Exception as e:
             print(f"Errore nell'invio dei dati: {e}")
             # Resetta la socket in caso di errore
