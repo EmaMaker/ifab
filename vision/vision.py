@@ -13,31 +13,51 @@ class ArUcoDetector:
     def detect_markers(self, frame: np.ndarray) -> Tuple[List, Optional[np.ndarray], List]:
         """Detects ArUco markers in a frame."""
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        cv2.imshow("grayCam", gray)
         return self.detector.detectMarkers(gray)
 
 
 class PerspectiveTransformer:
     """Handles perspective transformation operations."""
-    
+
     @staticmethod
     def order_points(pts: np.ndarray) -> np.ndarray:
         """Orders points in [top-left, top-right, bottom-right, bottom-left] order."""
         rect = np.zeros((4, 2), dtype=np.float32)
-        
-        # Top-left point will have the smallest sum (x+y)
-        # Bottom-right point will have the largest sum (x+y)
+
+        # Top_Left                Top_right
+        #   (0,0) --------------- (X_max,0)
+        #     |                       |
+        #     |                       |
+        # (0,Y_max) ------------(X_max,Y_max)
+        # Bottom_left             Bottom_right
+
+        # La somma delle coordinate (x+y) è minima nell'angolo in alto a sinistra
+        # e massima nell'angolo in basso a destra
         s = pts.sum(axis=1)
-        rect[0] = pts[np.argmin(s)]
-        rect[2] = pts[np.argmax(s)]
-        
-        # Top-right point will have the smallest difference (y-x)
-        # Bottom-left point will have the largest difference (y-x)
-        diff = np.diff(pts, axis=1)
-        rect[1] = pts[np.argmin(diff)]
-        rect[3] = pts[np.argmax(diff)]
-        
+        tl_idx = np.argmin(s)  # Top-left
+        br_idx = np.argmax(s)  # Bottom-right
+        rect[0] = pts[tl_idx]
+        rect[2] = pts[br_idx]
+
+        # Trova i due punti rimanenti
+        remaining_indices = [i for i in range(len(pts)) if i != tl_idx and i != br_idx]
+        remaining_points = pts[remaining_indices]
+
+        # Il punto top-right ha X maggiore e Y minore tra i due rimasti
+        if remaining_points[0][0] > remaining_points[1][0] and remaining_points[0][1] < remaining_points[1][1]:
+            rect[1] = remaining_points[0]  # Top-right
+            rect[3] = remaining_points[1]  # Bottom-left
+        elif remaining_points[1][0] > remaining_points[0][0] and remaining_points[1][1] < remaining_points[0][1]:
+            rect[1] = remaining_points[1]  # Top-right
+            rect[3] = remaining_points[0]  # Bottom-left
+        else:
+            # Se la condizione ideale non è soddisfatta, usa il punto con X maggiore come top-right
+            tr_idx = np.argmax(remaining_points[:, 0])
+            rect[1] = remaining_points[tr_idx]
+            rect[3] = remaining_points[1 - tr_idx]
         return rect
-    
+
     @staticmethod
     def transform_perspective(frame: np.ndarray, corners: np.ndarray, output_size: Tuple[int, int]) -> Tuple[np.ndarray, np.ndarray]:
         """Applies perspective transform to the frame based on detected corners."""
@@ -49,15 +69,34 @@ class PerspectiveTransformer:
 
         # Get ordered source points
         src_pts = PerspectiveTransformer.order_points(corners.astype(np.float32))
-        
+
+        def is_collinear(p1, p2, p3, epsilon=1e-5):
+            # Calcola l'area del triangolo formato dai tre punti
+            # Se l'area è (quasi) zero, i punti sono collineari
+            area = abs((p2[1] - p1[1]) * (p3[0] - p2[0]) - (p2[0] - p1[0]) * (p3[1] - p2[1]))
+            return area < epsilon
+
+        # Controlla che nessun gruppo di 3 punti sia collineare
+        if (is_collinear(src_pts[0], src_pts[1], src_pts[2]) or
+                is_collinear(src_pts[0], src_pts[1], src_pts[3]) or
+                is_collinear(src_pts[0], src_pts[2], src_pts[3]) or
+                is_collinear(src_pts[1], src_pts[2], src_pts[3])):
+            raise ValueError("I punti di origine sono collineari e non possono definire una trasformazione prospettica")
+
         # Define destination points for the transform
         dst_pts = np.array([
             [0, 0],
-            [output_size[0] - 1, 0],
-            [output_size[0] - 1, output_size[1] - 1],
-            [0, output_size[1] - 1]
+            [output_size[0], 0],
+            [output_size[0], output_size[1]],
+            [0, output_size[1]]
         ], dtype=np.float32)
-        
+
+        # Verifica presenza di NaN o infiniti
+        if np.any(np.isnan(src_pts)) or np.any(np.isnan(dst_pts)):
+            raise ValueError("I punti contengono valori NaN")
+        if np.any(np.isinf(src_pts)) or np.any(np.isinf(dst_pts)):
+            raise ValueError("I punti contengono valori infiniti")
+
         # Calculate perspective transform matrix
         matrix = cv2.getPerspectiveTransform(src_pts, dst_pts)
         
@@ -241,7 +280,8 @@ class Vision:
         # Window names
         self.window_name = 'ArUco Detection View'
         self.warped_window_name = 'Transformed View'
-        
+        self.last_good_warped = None
+
         # Store configuration for robot and machines
         self.robot_config = robot
         self.macchinari_config = macchinari
@@ -258,25 +298,16 @@ class Vision:
             if display:
                 cv2.imshow(self.window_name, frame)
             raise ValueError("No ArUco markers detected.")
-        
-        # self.marker_centers = {}
-        quad_corners = np.zeros((4, 2), dtype=np.float32)
 
         # Map detected markers to their expected positions
         for i, marker_id in enumerate(ids.flatten()):
             if marker_id in self.marker_corners_ids:
-                idx = self.marker_corners_ids.index(marker_id)
                 marker_corners_raw = corners[i][0]
                 center_x = np.mean(marker_corners_raw[:, 0])
                 center_y = np.mean(marker_corners_raw[:, 1])
                 # Update marker_centers stored information with the new found center
-                self.marker_centers[idx] = [center_x, center_y]
+                self.marker_centers[marker_id] = [center_x, center_y]
         
-        for index, cornerIds in enumerate(self.marker_corners_ids):
-            quad_corners[index] = self.marker_centers[self.marker_corners_ids.index(cornerIds)]
-         # format return information as matrix vector
-        
-
         # Draw detected markers if display is enabled
         if display:
             display_frame = frame.copy()
@@ -286,6 +317,9 @@ class Vision:
             cv2.imshow(self.window_name, display_frame)
         
         # Return corners only if all four are found
+        quad_corners = np.zeros((4, 2), dtype=np.float32)
+        for index, cornerIds in enumerate(self.marker_corners_ids): # format return information as matrix vector
+            quad_corners[index] = self.marker_centers.get(cornerIds, [0, 0])
         return quad_corners if len(self.marker_centers) == 4 else None
 
     def get_frame(self) -> np.ndarray:
@@ -316,10 +350,33 @@ class Vision:
             # Find quadrilateral corners
             corners = self.find_quadrilateral(frame, display=display)
             warped, matrix = PerspectiveTransformer.transform_perspective(frame, corners, self.output_size)
+            # Save the last good warped frame
+            self.last_good_warped = warped.copy()
         except Exception as e:
-            print(f"Error calculating perspective transform: {e}")
+            print(f"Error calculating perspective transform: {type(e).__name__} - {e}")
             if display:
-                cv2.imshow(self.warped_window_name, frame)
+                if self.last_good_warped:
+                    # Show the last good warped frame if available
+                    cv2.imshow(self.warped_window_name, self.last_good_warped)
+                else:
+                    # Add error text to original frame
+                    error_frame = frame.copy()
+                    text = "No enough Corner available to generate field projection"
+                    font = cv2.FONT_HERSHEY_SIMPLEX
+                    font_scale = 1.5  # Dimensione più grande
+                    thickness = 3
+
+                    # Calcola dimensioni del testo per centrarlo
+                    text_size = cv2.getTextSize(text, font, font_scale, thickness)[0]
+                    text_x = (error_frame.shape[1] - text_size[0]) // 2
+                    text_y = (error_frame.shape[0] + text_size[1]) // 2
+
+                    # Aggiunge contorno nero al testo per massimo contrasto
+                    cv2.putText(error_frame, text, (text_x, text_y), font, font_scale, (0, 0, 0), thickness + 2)
+                    # Aggiunge testo in giallo per alta visibilità
+                    cv2.putText(error_frame, text, (text_x, text_y), font, font_scale, (0, 255, 255), thickness)
+
+                    cv2.imshow(self.warped_window_name, error_frame)
             return {}, frame if display else None
         
         all_corners, all_ids, rejected = self.aruco_detector.detect_markers(frame)
@@ -383,7 +440,7 @@ class Vision:
                     warped, marker_id, pos_x_cm, pos_y_cm, angle_rad, trans_x_px, trans_y_px,
                     self.robot_config, self.macchinari_id_to_key)
         
-        # Print final result of wrapped image with HUD information
+        # Print final result of warped image with HUD information
         if display:
             cv2.imshow(self.warped_window_name, warped)
         
