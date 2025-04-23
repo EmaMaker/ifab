@@ -36,10 +36,14 @@ def send_to_robot(data: dict):
 if __name__ == '__main__':
     with open('config.json') as f:
         d = json.load(f)
-        corners_ids = [d['table']['aruco']['top-left'], d['table']['aruco']['top-right'], d['table']['aruco']['bottom-right'], d['table']['aruco']['bottom-left']]
-        # TODO: Camera index dinamico con il nome della camera, vedi aruco-read
-
+        corners_ids = [
+            d['table']['aruco']['top-left'], d['table']['aruco']['top-right'],
+            d['table']['aruco']['bottom-right'], d['table']['aruco']['bottom-left']]
+        tableSize = (d['table']['width'], d['table']['height'])
+        # corners_ids = [0, 1, 2, 3]
         transformer = Vision(camera_index=d["cameraIndex"], marker_corners_ids=corners_ids,
-                                                    robot=d['robot'], macchinari=d['macchinari'],
-                                                    sendToRobot=send_to_robot, display=True)
+                             width=d['table']['width'], height=d['table']['height'],
+                             robot=d['robot'], macchinari=d['macchinari'],
+                             sendToRobot=send_to_robot,
+                             display=True)
         transformer.run()
