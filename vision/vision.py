@@ -198,6 +198,7 @@ class Visualizer:
     def draw_marker_info(warped: np.ndarray, marker_id: int,
                          pos_x: float, pos_y: float, angle_rad: float,
                          trans_x_px: float, trans_y_px: float,
+                         # target_x: float, target_y: float, target_theta: float,
                          robot_config: Dict[str, Any], macchinari_id_to_key: Dict[int, str]) -> np.ndarray:
         """Draws marker information on the warped image."""
         angle_deg = np.degrees(angle_rad)
@@ -206,11 +207,20 @@ class Visualizer:
         center_px = (int(trans_x_px), int(trans_y_px))
         cv2.circle(warped, center_px, 5, (0, 0, 255), -1)
 
+        # # Draw target position
+        # target_px = (int(target_x * 100), int(target_y * 100))
+        # cv2.circle(warped, target_px, 3, (255, 0, 0), -1)
+
         # Draw orientation line
         line_length = 30
         end_x = int(trans_x_px + line_length * np.cos(angle_rad))
         end_y = int(trans_y_px + line_length * np.sin(angle_rad))
         cv2.line(warped, center_px, (end_x, end_y), (0, 255, 0), 2)
+
+        # # Draw target orientation line
+        # line_end_length = 15
+        # target_end_x = int(target_x * 100 + line_end_length * np.cos(target_theta))
+        # target_end_y = int(target_y * 100 + line_end_length * np.sin(target_theta))
 
         # Add text labels
         display_name = f"ID: {marker_id}"
@@ -403,26 +413,26 @@ class Vision:
 
             # Calculate base pose
             try:
-                pos_x_cm, pos_y_cm, angle_rad, trans_x_px, trans_y_px = self.pose_calculator.calculate_marker_pose(field_center_corners, current_aruco_corners, matrix)
+                pos_x, pos_y, angle_rad, trans_x_px, trans_y_px = self.pose_calculator.calculate_marker_pose(field_center_corners, current_aruco_corners, matrix)
             except Exception as e:
                 print(f"Error calculating pose for marker {marker_id}: {e}")
                 continue
 
             # Apply offsets based on marker type
-            final_x_cm, final_y_cm, final_angle_rad = pos_x_cm, pos_y_cm, angle_rad
+            final_x, final_y, final_angle_rad = pos_x, pos_y, angle_rad
             is_robot = False
 
             if marker_id == self.robot_config.get("aruco"):
-                final_x_cm, final_y_cm, final_angle_rad = MarkerPoseCalculator.apply_offset(pos_x_cm, pos_y_cm, angle_rad, self.robot_config)
+                final_x, final_y, final_angle_rad = MarkerPoseCalculator.apply_offset(pos_x, pos_y, angle_rad, self.robot_config)
                 is_robot = True
             elif marker_id in self.macchinari_id_to_key:
                 machine_config = self.macchinari_config.get(self.macchinari_id_to_key[marker_id], {})
-                final_x_cm, final_y_cm, final_angle_rad = MarkerPoseCalculator.apply_offset(pos_x_cm, pos_y_cm, angle_rad, machine_config)
+                final_x, final_y, final_angle_rad = MarkerPoseCalculator.apply_offset(pos_x, pos_y, angle_rad, machine_config)
 
             # Store marker data
             marker_data = {
                 'id': marker_id,
-                'position': [float(final_x_cm), float(final_y_cm)],
+                'position': [float(final_x), float(final_y)],
                 'angle': float(final_angle_rad),
                 'position_px': [float(trans_x_px), float(trans_y_px)],
             }
@@ -436,7 +446,11 @@ class Vision:
 
             # Draw marker information if display is enabled
             if display:
-                warped = Visualizer.draw_marker_info(warped, marker_id, pos_x_cm, pos_y_cm, angle_rad, trans_x_px, trans_y_px,
+                # Show marker ID and position and associated target position (offsets)
+                # TODO: Mostrare anche l'offset calcolando la posizione del target a schermo
+                warped = Visualizer.draw_marker_info(warped, marker_id,
+                                                     pos_x, pos_y, angle_rad, trans_x_px, trans_y_px,
+                                                     # final_x, final_y, final_angle_rad,
                                                      self.robot_config, self.macchinari_id_to_key)
 
         # Print final result of warped image with HUD information
