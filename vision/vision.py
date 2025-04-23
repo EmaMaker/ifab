@@ -42,8 +42,11 @@ class PerspectiveTransformer:
     def transform_perspective(frame: np.ndarray, corners: np.ndarray, output_size: Tuple[int, int]) -> Tuple[np.ndarray, np.ndarray]:
         """Applies perspective transform to the frame based on detected corners."""
 
-        if corners is None or len(corners) != 4:
-            raise ValueError("Corners are None. Cannot perform perspective transform.")
+        if corners is None:
+            raise ValueError("Corners are None")
+        if len(corners) != 4:
+            raise ValueError(f"Corners are less than 4. ({len(corners)})")
+
         # Get ordered source points
         src_pts = PerspectiveTransformer.order_points(corners.astype(np.float32))
         
@@ -60,6 +63,7 @@ class PerspectiveTransformer:
         
         # Apply perspective transform
         warped = cv2.warpPerspective(frame, matrix, output_size)
+        cv2.imshow('warped', warped)
         
         return warped, matrix
 
@@ -379,7 +383,10 @@ class Vision:
                 warped = Visualizer.draw_marker_info(
                     warped, marker_id, pos_x_cm, pos_y_cm, angle_rad, trans_x_px, trans_y_px,
                     self.robot_config, self.macchinari_id_to_key)
-                cv2.imshow(self.warped_window_name, warped)
+        
+        # Print final result of wrapped image with HUD information
+        if display:
+            cv2.imshow(self.warped_window_name, warped)
         
         # Send data if new data was processed and callback exists
         if newData and self.sendToRobot:
