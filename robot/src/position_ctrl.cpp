@@ -58,6 +58,8 @@ void update_position_ctrl(){
   odometric_localization(&new_position, &position_robot);
   position_robot = new_position;
 
+  
+
   Serial.print("X: ");
   Serial.print(position_robot.x);
   Serial.print(" | Y: ");
@@ -220,11 +222,7 @@ void set_desired_position(position_t goal){
   position_init = position_robot;
   position_fin = goal;
 
-  // theta goal counting multiplicity
-  // position_fin.theta = theta_multiplicity(position_init, position_fin.theta);
-  // Serial.println(position_fin.theta);
-
-  ctrl_phase = CTRL_PHASE_INIT_POSITION;
+  if (ctrl_phase != CTRL_PHASE_POSITION) ctrl_phase = CTRL_PHASE_INIT_POSITION;
 }
 
 double dst(position_t p1, position_t p2){

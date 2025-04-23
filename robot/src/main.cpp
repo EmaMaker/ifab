@@ -11,8 +11,8 @@
 
 #define UDP_PORT 4242
 
-const char* ssid = "FMD";
-const char* password = "Innovation_Phyrtual473";
+const char* ssid = "ifab-hotspot";
+const char* password = "ifabifab";
 bool wifi_connected = false;
 
 void setup_ota();
@@ -74,9 +74,9 @@ void wifi_receive(){
       double robot_y = doc["robot"]["y"];
       double robot_theta = doc["robot"]["theta"];
 
-      Serial.println(robot_x);
-      Serial.println(robot_y);
-      Serial.println(robot_theta);     
+      // Serial.println(robot_x);
+      // Serial.println(robot_y);
+      // Serial.println(robot_theta);     
       set_robot_position({robot_x, robot_y, robot_theta, micros()});
     }
   
@@ -85,9 +85,9 @@ void wifi_receive(){
       double target_y = doc["target"]["y"];
       double target_theta = doc["target"]["theta"];
       
-      Serial.println(target_x);
-      Serial.println(target_y);
-      Serial.println(target_theta);
+      // Serial.println(target_x);
+      // Serial.println(target_y);
+      // Serial.println(target_theta);
       set_desired_position({target_x, target_y, target_theta});
     }
 
