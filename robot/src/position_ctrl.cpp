@@ -4,9 +4,11 @@
 
 #include "position_ctrl.h"
 #include "wheels.h"
+#include "wireless.h"
 
 elapsedMillis timer_position_update{0};
 elapsedMillis timer_position_ctrl{0};
+elapsedMillis timer_debug{0};
 constexpr unsigned long sample_time_position_millis = 15;
 
 position_t position_robot{0};
@@ -58,12 +60,12 @@ void update_position_ctrl(){
   odometric_localization(&new_position, &position_robot);
   position_robot = new_position;
 
-  Serial.print("X: ");
-  Serial.print(position_robot.x);
-  Serial.print(" | Y: ");
-  Serial.print(position_robot.y);
-  Serial.print(" | T: ");
-  Serial.println(position_robot.theta);  
+  // Serial.print("X: ");
+  // Serial.print(position_robot.x);
+  // Serial.print(" | Y: ");
+  // Serial.print(position_robot.y);
+  // Serial.print(" | T: ");
+  // Serial.println(position_robot.theta);  
 
   if(ctrl_phase == CTRL_PHASE_IDLE){
       ctrl_x.SetMode(ctrl_x.Control::manual);
@@ -125,7 +127,23 @@ void update_position_ctrl(){
   
   set_left_wheel_angspd(angspd[1]);
   set_right_wheel_angspd(angspd[0]);
+  
   timer_position_update = 0;
+
+  // I think UDP as a buffer and calls are blocking if the buffer is full
+  // ToDo: maybe offload fast debugging to second core?
+  if (timer_debug >= 500){
+    String m = String(micros());
+    udp_send_debug_string("x", m, String(position_robot.x), true);
+    udp_send_debug_string("y", m, String(position_robot.y), true);
+    udp_send_debug_string("theta", m, String(position_robot.theta), true);
+    udp_send_debug_string("target_x", m, String(position_fin.x), true);
+    udp_send_debug_string("target_y", m, String(position_fin.y), true);
+    udp_send_debug_string("target_theta", m, String(position_fin.theta), true);
+    udp_send_debug_string("CTRL_PHASE", m, String(ctrl_phase), true);
+
+    timer_debug = 0;
+  }
 }
 
 void controller_position(double output[]){
