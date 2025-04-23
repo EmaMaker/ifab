@@ -13,7 +13,6 @@ class ArUcoDetector:
     def detect_markers(self, frame: np.ndarray) -> Tuple[List, Optional[np.ndarray], List]:
         """Detects ArUco markers in a frame."""
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        cv2.imshow("grayCam", gray)
         return self.detector.detectMarkers(gray)
 
 
