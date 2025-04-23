@@ -272,8 +272,8 @@ class Vision:
             display_frame = frame.copy()
             cv2.aruco.drawDetectedMarkers(display_frame, corners, ids)
             
-            if found_markers_count > 1:
-                display_frame = Visualizer.draw_quadrilateral(display_frame, marker_centers)
+            if len(self.marker_centers) > 1:
+                display_frame = Visualizer.draw_quadrilateral(display_frame, self.marker_centers)
             
             cv2.imshow(self.window_name, display_frame)
         
