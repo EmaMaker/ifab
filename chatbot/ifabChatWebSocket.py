@@ -1,6 +1,4 @@
 import json
-# Add these imports at the top of your file
-import os
 import random
 import threading
 import time
@@ -9,7 +7,7 @@ import certifi
 import requests
 import websocket
 
-from chatLib.util import *
+from .chatLib.util import *
 
 # Add this line near the beginning of your code, before any network requests
 os.environ['SSL_CERT_FILE'] = certifi.where()

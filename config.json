@@ -1,4 +1,6 @@
 {
+  "url": "https://europe.directline.botframework.com/v3/directline/conversations",
+  "auth": "Bearer BI91xBzzXppQiRxyBjniBLPFctD8IGqIR0BCmQCyODxSZrZjLX7QJQQJ99BDACi5YpzAArohAAABAZBS4vKQ.DEsKhbDDeYsTi7cHcOgSMV4HrdEnNrJAPp8hTnCv55nxFqtKRfonJQQJ99BDACi5YpzAArohAAABAZBS4AHw",
   "cameraIndex": 0,
   "table": {
     "width": 1.09,
@@ -11,23 +13,78 @@
     }
   },
   "robot": {
+    "client_addr": "10.42.0.200",
+    "client_port": 4242,
     "aruco": 18,
     "x_offset": 0.05,
     "y_offset": 0,
     "theta_offset": 0
+  },
+  "workZone": {
+    "saldatura": {
+      "aruco": 20,
+      "x_offset": 0,
+      "y_offset": 0,
+      "theta_offset": 0,
+      "text": "Zona saldatura",
+      "img_path": "chatbot/web-client/images/help.jpeg",
+      "say": "Vado a saldare"
+    },
+    "debug": {
+      "aruco": 21,
+      "x_offset": 0,
+      "y_offset": 0,
+      "theta_offset": 0,
+      "text": "Zona debug",
+      "img_path": "chatbot/web-client/images/weather.jpg",
+      "say": "Mi dirigo alla strumentazione di analisi"
+    },
+    "prototipazione": {
+      "aruco": 23,
+      "x_offset": 0,
+      "y_offset": 0,
+      "theta_offset": 0,
+      "text": "Zona prototipazione",
+      "img_path": "chatbot/images/news.jpg",
+      "say": "Vado sul tavolo di prototipazione"
+    }
   },
   "macchinari": {
     "3d": {
       "aruco": 22,
       "x_offset": 0,
       "y_offset": 0,
-      "theta_offset": 0
+      "theta_offset": 0,
+      "text": "Stampante 3D",
+      "img_path": "chatbot/web-client/images/commands.jpg",
+      "say": "Vado verso la Stampante 3D"
     },
     "laser": {
       "aruco": 24,
       "x_offset": 0,
       "y_offset": 0,
-      "theta_offset": 0
+      "theta_offset": 0,
+      "text": "Tagliatrice Laser",
+      "img_path": "chatbot/web-client/images/info.jpg",
+      "say": "Vado dalla Tagliatrice Laser"
+    },
+    "cnc": {
+      "aruco": 25,
+      "x_offset": 0,
+      "y_offset": 0,
+      "theta_offset": 0,
+      "text": "Fresatrice CNC",
+      "img_path": "chatbot/web-client/images/commands.jpg",
+      "say": "Mi dirigo verso la Fresatrice CNC"
+    },
+    "plotter": {
+      "aruco": 26,
+      "x_offset": 0,
+      "y_offset": 0,
+      "theta_offset": 0,
+      "text": "Plotter",
+      "img_path": "chatbot/web-client/images/commands.jpg",
+      "say": "Sto andando dal Plotter"
     }
   }
 }

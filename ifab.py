@@ -1,98 +1,158 @@
 import json
 import socket
 
-from vision.vision import Vision
+from chatbot.flaskFrontEnd import *
+from vision.vision import *
 
-# CLIENT_1 = "ifab.local"
-# CLIENT_PORT = 4242
-CLIENT_1 = "10.42.0.200"
-CLIENT_PORT = 4242
-# CLIENT_1 = "10.42.0.159"
-# CLIENT_PORT = 47269
+version = "0.0.1"
 
-# Memoria per i dati più recenti
-memory = {
-    'robot': {'data': None, 'valid': False},
-    'markers': {}
-}
 
-# Variabile per tenere traccia della socket
-sock = None
+class RobotController:
+    def __init__(self, client_addr: str, client_port: int, targets: dict):
+        # Configurazione client
+        self.client_addr = client_addr
+        self.client_port = client_port
 
-def get_socket():
-    """Ottiene una socket valida o ne crea una nuova."""
-    global sock
-    if sock is None:
-        try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        except Exception as e:
-            print(f"Errore nella creazione della socket: {e}")
-    return sock
-
-targetMachina = "3d"
-
-def send_to_robot(data: dict):
-    """Invia dati al robot, utilizzando la memoria per completare il pacchetto."""
-    global memory
-
-    # Invalida il robot se non ci sono nuovi dati
-    if data.get('robot') is not None:
-        memory['robot']['data'] = data['robot']
-        memory['robot']['valid'] = True
-    else:
-        # Quando arrivano nuovi dati ma senza informazioni sul robot, lo invalidiamo
-        memory['robot']['valid'] = False
-
-    # Aggiorna la memoria dei marker
-    for marker_key, marker_data in data.get('markers', {}).items():
-        memory['markers'][marker_key] = marker_data
-
-    # Componi il pacchetto da inviare
-    toSend = {}
-    if memory['robot']['valid'] and memory['robot']['data'] is not None:
-        toSend['robot'] = {
-            "x": memory['robot']['data']["position"][0],
-            "y": memory['robot']['data']["position"][1],
-            'theta': memory['robot']['data']["angle"]
+        # Memoria per i dati più recenti
+        self.memory = {
+            'robot': {'data': None},
+            'markers': {}
         }
 
-    if memory['markers'].get(targetMachina) is not None:
-        toSend['target'] = {
-            "x": memory['markers'][targetMachina]["position"][0],
-            "y": memory['markers'][targetMachina]["position"][1],
-            'theta': memory['markers'][targetMachina]["angle"]
-        }
+        # Variabile per tenere traccia della socket
+        self.sock = None
 
-    print("Data receve from Camera:", data)
-    print('Data Send to robot:', toSend)
+        # Target macchina
+        self.target_machine = None
+        self.targets = targets if targets is not None else {}
 
-    # Invia i dati usando la socket solo se c'è qualcosa da inviare
-    if toSend:
+    def get_socket(self):
+        """Ottiene una socket valida o ne crea una nuova."""
+        if self.sock is None:
+            try:
+                self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            except Exception as e:
+                print(f"Errore nella creazione della socket: {e}")
+        return self.sock
+
+    def set_target(self, target):
+        """Imposta una nuova macchina target."""
+        self.target_machine = target
+        self.send_to_robot(robot_data_fresh=False)
+
+    def update_states(self, data: dict):
+        """Aggiorna lo stato del robot e dei marker."""
+        # Aggiorna la memoria del robot
+        robotData = False
+        if data.get('robot') is not None:
+            self.memory['robot']['data'] = data['robot']
+            robotData = True
+
+        # Aggiorna la memoria dei marker
+        for marker_key, marker_data in data.get('markers', {}).items():
+            self.memory['markers'][marker_key] = marker_data
+
+        # Invia i dati al robot
+        self.send_to_robot(robot_data_fresh=robotData)
+
+    def send_to_robot(self, robot_data_fresh=False):
+        # Componi il pacchetto da inviare
+        toSend = {}
+        if robot_data_fresh and self.memory['robot']['data'] is not None:
+            toSend['robot'] = {
+                "x": self.memory['robot']['data']["position"][0],
+                "y": self.memory['robot']['data']["position"][1],
+                'theta': self.memory['robot']['data']["angle"]
+            }
+
+        if self.memory['markers'].get(self.target_machine) is not None:
+            toSend['target'] = {
+                "x": self.memory['markers'][self.target_machine]["position"][0],
+                "y": self.memory['markers'][self.target_machine]["position"][1],
+                'theta': self.memory['markers'][self.target_machine]["angle"]
+            }
+        if not toSend:  # Invia i dati usando la socket solo se c'è qualcosa da inviare
+            print("Nessun dato da inviare al robot")
+            return
+
+        print('Data Send to robot:', toSend)
         try:
-            s = get_socket()
+            s = self.get_socket()
             if s:
                 json_data = json.dumps(toSend, indent=0).replace("\n", "")
-                bytes_data = json_data.encode('utf-8')  + b'\0'
-                s.sendto(bytes_data, (CLIENT_1, CLIENT_PORT))
+                bytes_data = json_data.encode('utf-8') + b'\0'
+                s.sendto(bytes_data, (self.client_addr, self.client_port))
         except Exception as e:
             print(f"Errore nell'invio dei dati: {e}")
             # Resetta la socket in caso di errore
-            global sock
-            sock = None
+            self.sock = None
+
+    def botStatus(self):
+        """Restituisce lo stato del robot in base alla sua distanza dal target."""
+        # Verifica se abbiamo un target impostato
+        if self.target_machine is None:
+            return "Nessun target impostato per il robot"
+
+        # Verifica se abbiamo dati del robot e del target
+        if (self.memory['robot']['data'] is None or
+                self.memory['markers'].get(self.target_machine) is None):
+            return f"Il robot si sta muovendo verso: {self.target_machine}"
+
+        # Calcola la distanza tra il robot e il target
+        import math
+        robot_pos = self.memory['robot']['data']["position"]
+        target_pos = self.memory['markers'][self.target_machine]["position"]
+
+        distance = math.dist(robot_pos, target_pos)
+
+        threshold = 0.2  # Soglia di distanza in metri, 20 cm
+
+        if distance > threshold:
+            return f"Il robot si sta dirigendo verso: {self.targets[self.target_machine]['text']} (distanza: {distance:.2f} m)"
+        else:
+            return f"Il robot si trova davanti a: {self.targets[self.target_machine]['text']} (distanza: {distance:.2f} m)"
 
 
-# Example usage
 if __name__ == '__main__':
-    with open('config.json') as f:
-        d = json.load(f)
-        corners_ids = [
-            d['table']['aruco']['top-left'], d['table']['aruco']['top-right'],
-            d['table']['aruco']['bottom-right'], d['table']['aruco']['bottom-left']]
-        tableSize = (d['table']['width'], d['table']['height'])
-        # corners_ids = [0, 1, 2, 3]
-        transformer = Vision(camera_index=d["cameraIndex"], marker_corners_ids=corners_ids,
-                             width=d['table']['width'], height=d['table']['height'],
-                             robot=d['robot'], macchinari=d['macchinari'],
-                             sendToRobot=send_to_robot,
-                             display=True)
-        transformer.run()
+    # Argomenti da riga di comando di IFAB
+    parser = TreeParser(formatter_class=formatHelp, description='Avvio del sistema IFAB')
+    parser.add_argument('-v', '--version', action='version', version=f'%(prog)s {version}')
+    parser.add_argument('-c', '--config', dest='config', help="Percorso del file di configurazione [default '%(default)s']", default='config.json')
+    flaskFrontEnd_argsAdd(parser)  # Aggiungi gli argomenti per il server Flask
+    ap.audioPlayer_argsAdd(parser)  # Aggiungi gli argomenti per l'AudioPlayer
+    wl.whisperListener_argsAdd(parser)  # Aggiungi gli argomenti per il WhisperListener
+    args = parser.parse_args()
+
+    # Ottieni gli argomenti per il server Flask
+    host, port = flaskFrontEnd_useArgs(args)
+
+    # Avvia il server temporaneo di welcome-page
+    run_temp_server(port)
+
+    # Inizio il caricamento in memoria di tutte le risorse dei vari sottemi
+    with open(args.config) as f:
+        conf = json.load(f)
+
+    # Inizializza il client per la comunicazione con il robot
+    targetMachines = merge({}, conf['workZone'], conf['macchinari'])
+    robot_client = RobotController(conf['robot']['client_addr'], conf['robot']['client_port'], targets=targetMachines)
+    # Avvio del sottosistema di visione
+    cameraSystem = vision_setup(conf, visionStateUpdate=robot_client.update_states)
+    # Inizializza TTS
+    player = ap.audioPlayer_useArgs(args)
+    # Inizializza STT
+    listener = wl.whisperListener_useArgs(args)
+
+    # Generazione dei pulsanti statici con i target (testo, percorso_immagine, testo da dire, chiave del dizionario da cui è stato generato)
+    workZone = [{str(key): str(key), 'text': target['text'], 'img_path': target['img_path'], 'say': target['say']} for key, target in conf['workZone'].items()]
+    macchinari = [{str(key): str(key), 'text': target['text'], 'img_path': target['img_path'], 'say': target['say']} for key, target in conf['macchinari'].items()]
+
+    # Crea l'app Flask e SocketIO con tutte le callback e le informazioni del progetto
+    app, socketio, chat_client = create_app(conf['url'], conf['auth'], jobStation_list_top=workZone, machine_list_bot=macchinari,
+                                            ttsFun=player.play_text, sttFun=listener.transcribeText,
+                                            goBotFun=robot_client.set_target, getBotStatusFun=robot_client.botStatus)
+
+    # Ferma il server temporaneo prima di avviare quello Flask
+    stop_temp_server()
+    # Avvia il server Flask con SocketIO
+    socketio.run(app, host=host, port=port, debug=True, allow_unsafe_werkzeug=True, use_reloader=False)  # Avvia il server Flask con SocketIO disabilitando il riavvio automatico

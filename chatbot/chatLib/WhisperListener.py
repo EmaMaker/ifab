@@ -90,7 +90,7 @@ class WhisperListener():
         audio = whisperx.load_audio(audio_file)
         return self.model_obj.transcribe(audio, batch_size=self.batch_size, language=self.language)
 
-    def transcribeText(self, audio_text) -> dict:
+    def transcribeText(self, audio_text) -> str:
         if not audio_text:
             raise ValueError("Audio text is empty")
         audio = whisperx.load_audio(audio_text)

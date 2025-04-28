@@ -1,5 +1,7 @@
+import threading
 import tkinter as tk
 from typing import Callable, Optional, Tuple, List, Dict, Any
+from mergedeep import merge
 
 import cv2
 import numpy as np
@@ -254,43 +256,50 @@ class Vision:
     def __init__(self,
                  camera_index: int = 0,
                  aruco_dict_type: int = cv2.aruco.DICT_6X6_250,
-                 marker_corners_ids: List[int] = [10, 12, 14, 16],
+                 marker_corners_ids=None,
                  px_windows_height: int = 600,
                  width: float = 30.0,
                  height: float = 30.0,
-                 robot: Dict[str, Any] = {"aruco": 18, "x_offset": 0, "y_offset": 0, "theta_offset": 0},
-                 macchinari: Dict[str, Dict[str, Any]] = {
-                     "3d": {"aruco": 20, "x_offset": 0, "y_offset": 0, "theta_offset": 0},
-                     "laser": {"aruco": 21, "x_offset": 0, "y_offset": 0, "theta_offset": 0}
-                 },
-                 sendToRobot: Optional[Callable[[Dict[str, Any]], None]] = None,
+                 robot=None,
+                 targets=None,
+                 visionStateUpdate: Optional[Callable[[Dict[str, Any]], None]] = None,
                  display: bool = True):
         """Initializes the ArUcoQuadrilateralTransformer."""
         # Real Fields parameters
+        if marker_corners_ids is None:
+            marker_corners_ids = [10, 12, 14, 16]
+        if robot is None:
+            robot = {"aruco": 18, "x_offset": 0, "y_offset": 0, "theta_offset": 0}
+        if targets is None:
+            targets = {
+                "3d": {"aruco": 20, "x_offset": 0, "y_offset": 0, "theta_offset": 0},
+                "laser": {"aruco": 21, "x_offset": 0, "y_offset": 0, "theta_offset": 0}
+            }
         self.width = width
         self.height = height
         self.field_marker_centers = {}
 
         # OpenCV display data
-        self.display = display # Enable disable frame view
+        self.display = display  # Enable disable frame view
         root = tk.Tk()  # Get current monitor information using tkinter
         self.screen_width = root.winfo_screenwidth()
         self.screen_height = root.winfo_screenheight()
         root.destroy()
-
-        # Window names
-        self.window_name = 'ArUco Detection View'
-        self.warped_window_name = 'Transformed View'
-        self.warped_output_size = (int(px_windows_height * (self.width / self.height)), px_windows_height)
-        self.last_good_warped = None
 
         # Camera settings
         self.camera_index = camera_index
         self.cam = cv2.VideoCapture(self.camera_index)
         if not self.cam.isOpened():
             raise IOError(f"Cannot open camera with index {self.camera_index}")
+
+        # Window names
+        self.cameraView_windowsName = 'ArUco Detection View'
         self.frame_width = int(self.cam.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.frame_height = int(self.cam.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+        self.warped_windowName = 'Transformed View'
+        self.warped_output_size = (int(px_windows_height * (self.width / self.height)), px_windows_height)
+        self.last_good_warped = None
 
         # Initialize helper components
         self.aruco_detector = ArUcoDetector(aruco_dict_type)
@@ -303,10 +312,10 @@ class Vision:
 
         # Store configuration for robot and machines
         self.robot_config = robot
-        self.macchinari_config = macchinari
-        self.macchinari_id_to_key = {mData["aruco"]: key for key, mData in macchinari.items()}
+        self.macchinari_config = targets
+        self.macchinari_id_to_key = {mData["aruco"]: key for key, mData in targets.items()}
 
-        self.sendToRobot = sendToRobot
+        self.sendToRobot = visionStateUpdate
         self.last_good_corners = None
 
     def find_quadrilateral(self, frame: np.ndarray, display: bool = True) -> Optional[np.ndarray]:
@@ -315,7 +324,7 @@ class Vision:
 
         if ids is None:
             if display:
-                cv2.imshow(self.window_name, frame)
+                cv2.imshow(self.cameraView_windowsName, frame)
             raise ValueError("No ArUco markers detected.")
 
         # Map detected markers to their expected positions
@@ -333,7 +342,7 @@ class Vision:
             cv2.aruco.drawDetectedMarkers(display_frame, corners, ids)
             if len(self.field_marker_centers) > 1:
                 display_frame = Visualizer.draw_quadrilateral(display_frame, self.field_marker_centers)
-            cv2.imshow(self.window_name, display_frame)
+            cv2.imshow(self.cameraView_windowsName, display_frame)
 
         # Return corners only if all four are found
         field_center_corners = np.zeros((4, 2), dtype=np.float32)
@@ -348,7 +357,7 @@ class Vision:
             raise IOError("Error: Could not read frame from camera.")
         return frame
 
-    def process_frame(self, frame: Optional[np.ndarray] = None, display: bool = True):
+    def process_frame(self, frame: Optional[np.ndarray] = None, display: bool = True) -> None:
         """
         Processes a frame to find the quadrilateral and internal markers.
         Can optionally display visualization and return the processed frame.
@@ -376,7 +385,7 @@ class Vision:
             if display:
                 if self.last_good_warped:
                     # Show the last good warped frame if available
-                    cv2.imshow(self.warped_window_name, self.last_good_warped)
+                    cv2.imshow(self.warped_windowName, self.last_good_warped)
                 else:
                     # Add error text to original frame
                     error_frame = frame.copy()
@@ -395,7 +404,7 @@ class Vision:
                     # Aggiunge testo in giallo per alta visibilità
                     cv2.putText(error_frame, text, (text_x, text_y), font, font_scale, (0, 255, 255), thickness)
 
-                    cv2.imshow(self.warped_window_name, error_frame)
+                    cv2.imshow(self.warped_windowName, error_frame)
             return {}, frame if display else None
 
         all_corners, all_ids, rejected = self.aruco_detector.detect_markers(frame)
@@ -464,7 +473,7 @@ class Vision:
 
         # Print final result of warped image with HUD information
         if display:
-            cv2.imshow(self.warped_window_name, warped)
+            cv2.imshow(self.warped_windowName, warped)
 
         # Send data if new data was processed and callback exists
         if newData and self.sendToRobot:
@@ -473,31 +482,16 @@ class Vision:
             except Exception as e:
                 print(f"Error calling sendToRobot callback: {e}")
 
-        # Return the processed frame if display is enabled
-        return
-
-    def get_robot_pose(self, frame: Optional[np.ndarray] = None) -> Optional[Dict[str, Any]]:
-        """Gets the current pose of the robot marker."""
-        data = self.process_frame_data(frame)
-        return data.get('robot', None)
-
-    def get_macchinario_pose(self, key: str, frame: Optional[np.ndarray] = None) -> Optional[Dict[str, Any]]:
-        """Gets the current pose of a specific machine marker by its key."""
-        data = self.process_frame_data(frame)
-        return data.get('markers', {}).get(key, None)
-
-    def get_id_macchinario_from_name(self, key: str) -> Optional[int]:
-        """Gets the ArUco ID associated with a machine name/key."""
-        return self.macchinari_config.get(key, {}).get("aruco", None)
-
-    def run(self):
+    def __run__(self):
         """Starts the main processing loop."""
-        cv2.namedWindow(self.window_name)
-        cv2.namedWindow(self.warped_window_name)
+        #
+        cv2.namedWindow(self.cameraView_windowsName)
         # Posiziona le finestre affiancate per evitare sovrapposizioni
-        cv2.moveWindow(self.window_name, 20, 20)  # Prima finestra a sinistra
+        cv2.moveWindow(self.cameraView_windowsName, 20, 20)  # Prima finestra a sinistra
+
+        cv2.namedWindow(self.warped_windowName)
         # Posiziona la seconda finestra allineata al bordo destro dello schermo
-        cv2.moveWindow(self.warped_window_name, self.screen_width - self.warped_output_size[0] - 20,
+        cv2.moveWindow(self.warped_windowName, self.screen_width - self.warped_output_size[0] - 20,
                        self.screen_height - self.warped_output_size[1] - 20)  # Finestra allineata a destra
         while True:
             try:
@@ -510,8 +504,8 @@ class Vision:
             except (IOError, ValueError) as e:
                 print(f"Error getting frame: {e}")
                 continue
-
         self.cleanup()
+        exit(0) # Exit the program when the loop ends
 
     def cleanup(self):
         """Releases the camera and destroys all OpenCV windows."""
@@ -520,3 +514,25 @@ class Vision:
             self.cam.release()
         cv2.destroyAllWindows()
         print("Cleanup complete.")
+
+    def thread_run(self):
+        """Starts the main processing loop in a separate thread."""
+        thread = threading.Thread(target=self.__run__)
+        thread.start()
+
+# Setup del sottosistema di visione, avvia un thread per la visione della camera e ritorna il riferimento alla classe
+def vision_setup(conf:dict, visionStateUpdate:Optional[Callable[[Dict[str, Any]], None]]=None) -> Vision:
+    table = conf['table']
+    aruco = table['aruco']
+    corners_ids = [
+        aruco['top-left'], aruco['top-right'],
+        aruco['bottom-right'], aruco['bottom-left']]
+    targetMachines = merge({}, conf['workZone'], conf['macchinari'])
+    transformer = Vision(camera_index=conf["cameraIndex"],
+                         marker_corners_ids=corners_ids,
+                         width=table['width'], height=table['height'],
+                         robot=conf['robot'], targets=targetMachines,
+                         visionStateUpdate=visionStateUpdate,
+                         display=True)
+    transformer.thread_run()
+    return transformer
