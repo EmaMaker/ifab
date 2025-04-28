@@ -47,7 +47,10 @@
             'Caricamento moduli di intelligenza artificiale...',
             'Configurazione del sistema di comunicazione...',
             'Connessione ai servizi remoti...',
-            'Preparazione dell\'interfaccia utente...'
+            'Preparazione dell\'interfaccia utente...',
+            'Collegamento con il robot...',
+            'Avviamento del sistema di monitoraggio...',
+            'Attivazione del sistema di riconoscimento vocale...'
         ];
 
         let currentStatus = 0;
@@ -56,7 +59,7 @@
         const maxFailedAttempts = 60; // 5 minuti (60 * 5s)
 
         // Cambia il messaggio ogni 1 secondo
-        setInterval(rotateStatus, 1000);
+        const statusInterval = setInterval(rotateStatus, 1000);
 
         // Inizia a controllare lo stato del server
         setTimeout(checkServerStatus, 2000);
@@ -79,9 +82,10 @@
                 })
                 .then(data => {
                     if (data.ready) {
+                        clearInterval(statusInterval); // Ferma la rotazione dei messaggi
+                        rotateEnable = false; // Assicura che non ci siano chiamate residue
                         loadingStatus.textContent = "Server pronto! Reindirizzamento...";
                         loadingStatus.style.color = "var(--primary-color)";
-                        rotateEnable = false; // Ferma il caricamento
                         // Forza la navigazione diretta dopo un breve ritardo
                         setTimeout(() => {
                             window.location.replace('/');
