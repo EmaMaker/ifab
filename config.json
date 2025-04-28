@@ -27,7 +27,7 @@
       "y_offset": 0,
       "theta_offset": 0,
       "text": "Zona saldatura",
-      "img_path": "chatbot/web-client/images/help.jpeg",
+      "img_path": "web-client/images/help.jpeg",
       "say": "Vado a saldare"
     },
     "debug": {
@@ -36,7 +36,7 @@
       "y_offset": 0,
       "theta_offset": 0,
       "text": "Zona debug",
-      "img_path": "chatbot/web-client/images/weather.jpg",
+      "img_path": "web-client/images/weather.jpg",
       "say": "Mi dirigo alla strumentazione di analisi"
     },
     "prototipazione": {
@@ -45,7 +45,7 @@
       "y_offset": 0,
       "theta_offset": 0,
       "text": "Zona prototipazione",
-      "img_path": "chatbot/images/news.jpg",
+      "img_path": "images/news.jpg",
       "say": "Vado sul tavolo di prototipazione"
     }
   },
@@ -56,7 +56,7 @@
       "y_offset": 0,
       "theta_offset": 0,
       "text": "Stampante 3D",
-      "img_path": "chatbot/web-client/images/commands.jpg",
+      "img_path": "web-client/images/commands.jpg",
       "say": "Vado verso la Stampante 3D"
     },
     "laser": {
@@ -65,7 +65,7 @@
       "y_offset": 0,
       "theta_offset": 0,
       "text": "Tagliatrice Laser",
-      "img_path": "chatbot/web-client/images/info.jpg",
+      "img_path": "web-client/images/info.jpg",
       "say": "Vado dalla Tagliatrice Laser"
     },
     "cnc": {
@@ -74,7 +74,7 @@
       "y_offset": 0,
       "theta_offset": 0,
       "text": "Fresatrice CNC",
-      "img_path": "chatbot/web-client/images/commands.jpg",
+      "img_path": "web-client/images/commands.jpg",
       "say": "Mi dirigo verso la Fresatrice CNC"
     },
     "plotter": {
@@ -83,7 +83,7 @@
       "y_offset": 0,
       "theta_offset": 0,
       "text": "Plotter",
-      "img_path": "chatbot/web-client/images/commands.jpg",
+      "img_path": "web-client/images/commands.jpg",
       "say": "Sto andando dal Plotter"
     }
   }
