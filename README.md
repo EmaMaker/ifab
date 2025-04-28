@@ -1,144 +1,97 @@
 # IFAB Chatbot
 
-> **IMPORTANTE**: Prima di utilizzare questo progetto, è necessario eseguire lo script `setup.sh` per installare o attivare tutte le dipendenze necessarie. Lo script si occupa automaticamente di rilevare il sistema operativo, installare le dipendenze di sistema, creare l'ambiente virtuale Python e configurare correttamente le librerie. Solo dopo aver eseguito questo passaggio è possibile avviare con tranquillità gli script del totem.
->
-> ```bash
-> # Eseguire questo comando prima di ogni utilizzo
-> source ./setup.sh
-> ```
->
-> **NOTA**: È fondamentale utilizzare il comando `source` per eseguire lo script, in modo che l'ambiente virtuale venga attivato nella sessione corrente del terminale. Utilizzando `./setup.sh` l'ambiente virtuale verrebbe attivato solo all'interno dello script, senza effetto sul terminale corrente.
+Questo progetto implementa un sistema di chatbot interattivo per IFAB, progettato per fornire informazioni e interagire con un robot tramite un'interfaccia web, riconoscimento e sintesi vocale, e un sistema di visione.
 
-Questo progetto implementa un sistema di chatbot interattivo per IFAB, composto da diversi sottosistemi tra cui un'interfaccia web con supporto per sintesi vocale (TTS) e riconoscimento vocale (STT), un sistema di gestione delle telecamere e componenti robotici.
+## Installazione e Avvio Rapido
 
-## Struttura del Progetto
+Per iniziare rapidamente, segui questi passaggi:
 
-Il progetto è organizzato nelle seguenti directory principali:
+1.  **Setup Iniziale**: Esegui lo script `setup.sh` per installare tutte le dipendenze necessarie e configurare l'ambiente. Questo script rileva il sistema operativo, installa pacchetti di sistema, crea un ambiente virtuale Python 3.10.11 e installa le librerie Python richieste.
 
-- `chatbot/`: Contiene l'implementazione del chatbot web e relativi script
-  - `ifabWebChat/`: Interfaccia web del chatbot
-  - `chatLib/`: Librerie Python di supporto
-  - `test-scripts/`: Script di test per il chatbot
-  - `tts-model/`: Modelli per la sintesi vocale (Text-to-Speech)
-- `Camera-SubSystem/`: Sistema di gestione delle telecamere
-- `robot/`: Componenti per il controllo robotico
+    ```bash
+    # Esegui questo comando UNA SOLA VOLTA o quando le dipendenze cambiano
+    ./setup.sh
+    ```
 
-## Requisiti da installare a mano (se setup.sh non viene eseguito)
+2.  **Attivazione Ambiente e Avvio**: Prima di ogni utilizzo, attiva l'ambiente virtuale e avvia l'applicazione principale usando `start-chatbot.sh`. Questo script attiva l'ambiente virtuale (necessario per usare le dipendenze installate) e lancia `ifab.py`.
 
-### Ambiente Python
+    ```bash
+    # Esegui questo comando OGNI VOLTA che vuoi avviare il chatbot
+    ./start-chatbot.sh
+    ```
 
-**Nota importante**: Questo progetto è progettato per funzionare con **Python 3.10.11**. Si consiglia di utilizzare questa versione specifica per evitare problemi di compatibilità.
+    Lo script `start-chatbot.sh` avvierà il server web backend e, una volta pronto, tenterà di aprire automaticamente l'interfaccia web nel browser predefinito all'indirizzo `http://localhost:8000`.
 
-#### Creazione dell'ambiente virtuale
+    **Uso Avanzato di `setup.sh`**:
+    -   Lo script `setup.sh` non solo installa le dipendenze, ma attiva anche tutte le feature necessarie per l'ambiente di sviluppo.
+    -   Se è necessario forzare una reinstallazione completa (ad esempio, se le librerie o le dipendenze sono cambiate), è possibile eseguire lo script con l'opzione `-f` o `--force`:
+        ```bash
+        ./setup.sh --force
+        ```
 
-Si consiglia di utilizzare un ambiente virtuale Python per evitare conflitti tra dipendenze:
+> **NOTA**: È fondamentale eseguire `./setup.sh` la prima volta (o con `--force` se necessario). Per gli avvii successivi, usare sempre `./start-chatbot.sh` che si occupa anche di attivare l'ambiente corretto tramite `source ./setup.sh` al suo interno.
 
-```bash
-# Assicurarsi di avere Python 3.10.11 installato
-# Creazione dell'ambiente virtuale
-python3.10 -m venv .venv
-# In alternativa, se python3.10 non è disponibile come comando
-python3 -m venv .venv --python=python3.10
+> **Icona Desktop (Linux)**: Su sistemi Linux compatibili, lo script `setup.sh` tenta di creare un collegamento `.desktop` sul desktop dell'utente. Questo collegamento permette di avviare l'applicazione IFAB Chatbot con un doppio clic, eseguendo automaticamente lo script `start-chatbot.sh`.
 
-# Attivazione dell'ambiente virtuale
-# Su macOS/Linux
-source .venv/bin/activate
-# Su Windows
-# .venv\Scripts\activate
-```
+## Architettura del Sistema
 
-#### Installazione delle dipendenze Python
+Il sistema è composto dai seguenti sottosistemi principali, orchestrati dallo script `ifab.py`:
 
-Il progetto richiede diverse librerie Python che possono essere installate utilizzando il file `requirements.txt`:
+1.  **Chatbot Web (`chatbot/`)**: Fornisce l'interfaccia utente principale.
+    *   **Frontend Web (`chatbot/web-client/`)**: Interfaccia HTML/CSS/JS con cui l'utente interagisce.
+    *   **Backend Flask (`chatbot/flaskFrontEnd.py`)**: Server web basato su Flask che gestisce le richieste HTTP e la comunicazione WebSocket (`chatbot/ifabChatWebSocket.py`) per l'interazione in tempo reale.
+    *   **Sintesi Vocale (TTS - Text-to-Speech) (`chatbot/chatLib/AudioPlayer.py`, `chatbot/tts-model/`)**: Utilizza `piper-tts` per convertire il testo delle risposte del chatbot in audio parlato.
+    *   **Riconoscimento Vocale (STT - Speech-to-Text) (`chatbot/chatLib/WhisperListener.py`)**: Utilizza `WhisperX` per trascrivere l'audio catturato dal microfono dell'utente in testo, permettendo l'input vocale.
 
-```bash
-pip install -r requirements.txt
-# macOS
-pip install -r requirements.txt --no-deps
-```
+2.  **Sistema di Visione (`vision/`)**: Responsabile dell'analisi dell'ambiente tramite telecamere.
+    *   **Gestione Telecamere e Rilevamento Marker (`vision/vision.py`)**: Utilizza OpenCV per acquisire immagini dalle telecamere collegate.
+    *   **Test script per Rilevamento Aruco (`vision/Camera-test/arucoRead.py`)**: Identifica specifici marker Aruco nell'ambiente. Questi marker sono usati per localizzare posizioni di interesse (es. macchinari) e potenzialmente il robot stesso.
+    *   **Calibrazione (`vision/Camera-test/generateIntrinsic.py`)**: Script e dati per calibrare le telecamere e ottenere matrici intrinseche, necessarie per una stima accurata della posizione 3D dei marker.
+    *   **Generazione Marker (`vision/Camera-test/arucoMake.py`)**: Utilizza la libreria `aruco` di OpenCV per generare e salvare i marker Aruco in file PNG.
 
-**Nota**: Su macOS potrebbero verificarsi problemi di dipendenza con alcune librerie. L'opzione `--no-deps` è consigliata poiché il file `requirements.txt` contiene già tutte le dipendenze necessarie.
+3.  **Controllo Robot (`ifab.py`, `robot/`)**: Gestisce la comunicazione e l'invio di comandi al robot fisico.
+    *   **`RobotController` (classe in `ifab.py`)**: Mantiene lo stato più recente della posizione del robot e dei marker rilevati dal sistema di visione. Quando viene impostato un target (una macchina specifica identificata da un marker Aruco), `RobotController` invia periodicamente la posizione corrente del robot e la posizione del target al robot fisico tramite pacchetti UDP sulla rete locale (configurabile in `config.json`).
+    *   **Firmware Robot (`robot/`)**: Contiene il codice sorgente (PlatformIO/C++) che gira sulla scheda di controllo del robot (probabilmente un ESP32 o simile). Questo codice riceve i pacchetti UDP da `ifab.py` e implementa la logica di navigazione per raggiungere il target specificato, controllando i motori.
 
-**Importante**: Le dipendenze nel file `requirements.txt` sono ottimizzate per Python 3.10.11. L'utilizzo di altre versioni di Python potrebbe causare incompatibilità con alcune librerie.
+4.  **Configurazione (`config.json`)**: File JSON che definisce parametri chiave come indirizzi IP, porte, configurazioni delle telecamere, e i target (macchine) riconosciuti con i loro ID marker Aruco associati.
 
-### Principali dipendenze Python
+## Configurazione (`config.json`)
 
-Il progetto utilizza le seguenti librerie Python principali:
+Il file `config.json` contiene tutte le impostazioni specifiche dell'installazione e del comportamento del chatbot. Ecco una spiegazione delle sezioni principali:
 
-- **Flask, Flask-Cors, Flask-SocketIO**: Framework web per l'interfaccia del chatbot
-- **Requests, Websocket-client**: Gestione delle richieste HTTP e WebSocket
-- **Piper-tts**: Sintesi vocale (Text-to-Speech)
-- **WhisperX**: Riconoscimento vocale (Speech-to-Text)
-- **OpenCV (opencv-python)**: Elaborazione delle immagini e gestione delle telecamere
-- **NumPy, Matplotlib**: Elaborazione numerica e visualizzazione
-- **SoundDevice**: Riproduzione audio
+-   **`url`**: L'endpoint del servizio Bot Framework Direct Line a cui connettersi.
+-   **`auth`**: Il token di autenticazione (Bearer token) per il servizio Direct Line.
+-   **`cameraIndex`**: L'indice della webcam da utilizzare per il sistema di visione (es. 0 per la prima webcam rilevata).
+-   **`table`**: Definisce le proprietà del tavolo di lavoro.
+    -   `width`, `height`: Dimensioni fisiche del tavolo in metri.
+    -   `aruco`: Mappa gli ID dei marker ArUco agli angoli del tavolo (`top-left`, `top-right`, `bottom-left`, `bottom-right`). Questi marker sono usati per definire il sistema di coordinate del tavolo.
+-   **`robot`**: Configurazione specifica del robot.
+    -   `client_addr`, `client_port`: Indirizzo IP e porta per comunicare con il controller del robot.
+    -   `aruco`: L'ID del marker ArUco posizionato sul robot stesso, usato per tracciarne la posizione e l'orientamento.
+    -   `x_offset`, `y_offset`, `theta_offset`: Offset (in metri e gradi) tra il centro del marker ArUco del robot e il suo punto operativo effettivo (es. la punta di un attuatore).
+-   **`workZone`** e **`macchinari`**: Definiscono le aree di lavoro e i macchinari presenti nell'ambiente. La struttura interna di ogni elemento in queste due sezioni è identica:
+    -   `aruco`: L'ID del marker ArUco associato a quella zona o macchinario.
+    -   `x_offset`, `y_offset`, `theta_offset`: Offset (in metri e gradi) rispetto al centro del marker ArUco per definire il punto di interesse specifico (es. il centro dell'area di lavoro o il punto di interazione con il macchinario).
+    -   `text`: Il nome visualizzato nell'interfaccia utente.
+    -   `img_path`: Il percorso dell'immagine associata, visualizzata nell'interfaccia. **Importante**: Questo percorso deve essere relativo alla directory principale del progetto (`ifab-chatbot`), poiché il server Flask serve i file statici da lì (es. `web-client/images/nome_immagine.jpg`).
+    -   `say`: La frase che il robot pronuncerà quando gli viene chiesto di andare in quella zona o da quel macchinario.
 
-### Configurazione per il riconoscimento vocale (WhisperX)
+    *Nota*: `workZone` e `macchinari` sono separati in due dizionari distinti principalmente per facilitare l'organizzazione e la visualizzazione nel front-end, permettendo di raggruppare logicamente le destinazioni.
 
-Il sistema di riconoscimento vocale (STT) utilizza WhisperX, che richiede alcune configurazioni specifiche in base al sistema operativo:
+## Script Principali
 
-#### Arch Linux (KDE)
+-   **`setup.sh`**: Script di installazione e configurazione dell'ambiente.
+-   **`start-chatbot.sh`**: Script per attivare l'ambiente virtuale e avviare `ifab.py`.
+-   **`ifab.py`**: Punto di ingresso principale dell'applicazione. Inizializza e coordina tutti i sottosistemi (Flask, Visione, RobotController).
 
-Su Arch Linux, è necessario installare le seguenti dipendenze:
+## Dipendenze Chiave (Gestite da `setup.sh`)
 
-```bash
-# Installazione delle dipendenze necessarie
-sudo pacman -S ffmpeg cuda cudnn nvtop nvidia-drivers
-```
+-   **Python 3.10.11**: Versione specifica richiesta.
+-   **Flask, Flask-SocketIO**: Per il backend web e WebSocket.
+-   **WhisperX**: Per STT (richiede `ffmpeg` e potenzialmente CUDA/cuDNN su Linux per accelerazione GPU).
+-   **piper-tts**: Per TTS.
+-   **OpenCV (opencv-python)**: Per il sistema di visione.
+-   **NumPy**: Per calcoli numerici (usato da OpenCV e altri).
+-   **SoundDevice**: Per la riproduzione audio (TTS).
 
-Esempio di utilizzo:
-
-```bash
-whisperx --model large-v3 --compute_type float32 --language it chatbot/demo-wav/audio_20250411-143626.wav
-```
-
-#### Ubuntu
-
-Su Ubuntu, l'installazione è ancora in fase di sviluppo (work in progress). Sono stati riscontrati alcuni problemi specifici che stiamo cercando di risolvere. È necessario configurare correttamente le librerie NVIDIA:
-
-```bash
-# Installazione delle dipendenze
-sudo apt install ffmpeg
-
-# Configurazione delle librerie NVIDIA (potrebbe richiedere adattamenti)
-export LD_LIBRARY_PATH="$VIRTUAL_ENV/lib/python3.10/site-packages/nvidia/cudnn/lib"
-```
-
-#### macOS
-
-Su macOS, il sistema funziona correttamente utilizzando Homebrew per installare le dipendenze, ma senza supporto NVIDIA. In questo caso, WhisperX utilizzerà automaticamente la CPU:
-
-```bash
-# Installazione delle dipendenze con Homebrew
-brew install ffmpeg
-```
-
-Il modulo `WhisperListener.py` è in grado di rilevare automaticamente se la GPU non è disponibile e passare alla CPU.
-
-
-## Avvio della demo Chatbot Web
-
-Per avviare l'interfaccia web del chatbot:
-
-```bash
-python chatbot/flaskFrontEnd.py [opzioni]
-```
-
-### Opzioni disponibili
-
-- `--host HOST`: Host del server (default: '0.0.0.0')
-- `--port PORT`: Porta del server (default: '8000')
-- `--tts_model TTS_MODEL`: Path al modello Piper-TTS (default: 'chatbot/tts-model/it_IT-paola-medium.onnx')
-- `--stt_model STT_MODEL`: Nome del modello Whisper (default: 'large-v3')
-- `--device DEVICE`: Dispositivo per eseguire il modello (cpu o cuda, default: 'cuda')
-- `--language LANGUAGE`: Lingua dell'audio (default: 'it')
-- `--batch_size BATCH_SIZE`: Dimensione del batch per l'elaborazione (default: '16')
-- `--compute_type COMPUTE_TYPE`: Tipo di calcolo (float32 o int8, default: 'float32')
-
-## Contribuire al Progetto
-
-Per contribuire al progetto, si prega di seguire le convenzioni di codice esistenti e di testare accuratamente le modifiche prima di inviarle.
-
-## Licenza
-
-Consultare il file di licenza per informazioni sui diritti d'uso e distribuzione.
+Per dettagli specifici sulla configurazione manuale (sconsigliata) o sui requisiti per sistemi operativi specifici (es. dipendenze NVIDIA per WhisperX su Linux), fare riferimento alle sezioni pertinenti nel file `README.md` originale o nel codice di `setup.sh`.

@@ -166,7 +166,7 @@ class MarkerPoseCalculator:
         """Applies configured offset to a pose."""
         offset_x = config.get("x_offset", 0.0)
         offset_y = config.get("y_offset", 0.0)
-        offset_theta = config.get("theta_offset", 0.0)
+        offset_theta = np.deg2rad(config.get("theta_offset", 0.0))
 
         # Rotate offset vector by marker angle and add to position
         final_x = x + offset_x * np.cos(angle_rad) - offset_y * np.sin(angle_rad)
