@@ -58,8 +58,8 @@
         let rotateEnable = true;
         const maxFailedAttempts = 60; // 5 minuti (60 * 5s)
 
-        // Cambia il messaggio ogni 2 secondo
-        const statusInterval = setInterval(rotateStatus, 2000);
+        // Cambia il messaggio ogni 1,5 secondi
+        const statusInterval = setInterval(rotateStatus, 1500);
 
         // Inizia a controllare lo stato del server
         setTimeout(checkServerStatus, 2000);
@@ -89,6 +89,7 @@
                         // Forza la navigazione diretta dopo un breve ritardo
                         setTimeout(() => {
                             window.location.replace('/');
+                            window.location.reload(true);
                         }, 1000);
                         return;
                     } else {

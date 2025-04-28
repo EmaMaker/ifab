@@ -96,7 +96,7 @@ class RobotController:
         # Verifica se abbiamo dati del robot e del target
         if (self.memory['robot']['data'] is None or
                 self.memory['markers'].get(self.target_machine) is None):
-            return f"Il robot si sta muovendo verso: {self.target_machine}"
+            return f"Il robot si sta muovendo verso: {self.targets[self.target_machine]['text']}"
 
         # Calcola la distanza tra il robot e il target
         import math

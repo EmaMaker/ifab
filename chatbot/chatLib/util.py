@@ -59,7 +59,10 @@ def messageBox(who, text, style=StyleBox.Bold):
     wrapped_text = []
     if not text:
         text = f"Call without text, stack trace: {traceback.format_exc()}"
-    for line in text.splitlines():
+    for line in text.splitlines(keepends=True):
+        if line == "\n":
+            wrapped_text.append("")
+            continue
         wrapped_text.extend(wrapper.wrap(line))
     print(indent(create_box("\n".join(wrapped_text), style), "  "))
 

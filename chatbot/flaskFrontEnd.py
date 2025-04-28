@@ -199,7 +199,7 @@ def create_app(url: str, auth: str,
             # Invia il messaggio al bot in un thread separato per non bloccare la risposta HTTP
             if getBotStatusFun is not None:
                 botStatus = getBotStatusFun()  # Chiedi al sistema preposto lo stato del bot per inviarlo al chatbot
-                text = f"Stato del bot rilevato (da usare e non ripetere): {botStatus}\n\nDomanda dell'utente: {text}"  # Aggiungi lo stato del bot al messaggio
+                text = f"Stato del bot rilevato:\n{botStatus}\n\nDomanda dell'utente:\n{text}"  # Aggiungi lo stato del bot al messaggio
             threading.Thread(target=chat_client.send_message, args=(text,)).start()
             messageBox("Frontend Messaggio di testo", text, StyleBox.Light)
             return jsonify({'success': True})

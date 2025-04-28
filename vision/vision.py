@@ -381,7 +381,6 @@ class Vision:
             # Save the last good warped frame
             self.last_good_warped = warped.copy()
         except Exception as e:
-            print(f"Error calculating perspective transform: {type(e).__name__} - {e}")
             if display:
                 if self.last_good_warped:
                     # Show the last good warped frame if available
