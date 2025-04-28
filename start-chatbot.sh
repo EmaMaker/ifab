@@ -4,9 +4,22 @@
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$SCRIPT_DIR/setup.sh"
 
-# Avvia il browser dopo 5 secondi per dare tempo al backend di avviarsi
+# Avvia il browser quando il backend è pronto
 {
-  sleep 5 # Attendi che il server sia pronto
+  echo "Attendo che la welcome-page del server sia pronta..."
+  TIMEOUT=30
+  ELAPSED=0
+  while ! curl -s http://localhost:8000 -o /dev/null -w "%{http_code}" | grep -q "200\|30[0-9]"; do
+    sleep 1
+    ELAPSED=$((ELAPSED+1))
+    if [ $ELAPSED -ge $TIMEOUT ]; then
+      echo "Timeout: il server non risponde dopo $TIMEOUT secondi"
+      exit 1
+    fi
+    echo -n "."
+  done
+  echo -e "\nServer pronto! Apro il browser..."
+
   # Rileva il sistema operativo e apri il browser appropriatamente
   if [[ "$OSTYPE" == "darwin"* ]]; then
     # macOS
@@ -17,4 +30,4 @@ source "$SCRIPT_DIR/setup.sh"
   fi
 } &
 
-python "$SCRIPT_DIR/chatbot/flaskFrontEnd.py"
+python "$SCRIPT_DIR/ifab.py"
