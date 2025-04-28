@@ -9,16 +9,16 @@
 #define CTRL_PHASE_IDLE -10
 #define CTRL_PHASE_ORIENT_FINAL 1
 
-#define KP_X 1
+#define KP_X 0.5
 #define KI_X 0
 #define KD_X 0
-#define KP_Y 1
+#define KP_Y 0.5
 #define KI_Y 0
 #define KD_Y 0
-#define KP_ORIENT 1.25
+#define KP_ORIENT 0.85
 #define KI_ORIENT 0
 #define KD_ORIENT 0
-constexpr float V_MAX = 0.35;
+constexpr float V_MAX = 0.25;
 constexpr float A_MAX = 0.2;
 constexpr float Ts = V_MAX / A_MAX;
 

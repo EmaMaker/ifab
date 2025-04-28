@@ -4,9 +4,11 @@
 
 #include "position_ctrl.h"
 #include "wheels.h"
+#include "wireless.h"
 
 elapsedMillis timer_position_update{0};
 elapsedMillis timer_position_ctrl{0};
+elapsedMillis timer_debug{0};
 constexpr unsigned long sample_time_position_millis = 15;
 
 position_t position_robot{0};
@@ -58,15 +60,14 @@ void update_position_ctrl(){
   odometric_localization(&new_position, &position_robot);
   position_robot = new_position;
 
-  Serial.print("X: ");
-  Serial.print(position_robot.x);
-  Serial.print(" | Y: ");
-  Serial.print(position_robot.y);
-  Serial.print(" | T: ");
-  Serial.println(position_robot.theta);  
-  
-  switch(ctrl_phase){
-    case CTRL_PHASE_IDLE:
+  // Serial.print("X: ");
+  // Serial.print(position_robot.x);
+  // Serial.print(" | Y: ");
+  // Serial.print(position_robot.y);
+  // Serial.print(" | T: ");
+  // Serial.println(position_robot.theta);  
+
+  if(ctrl_phase == CTRL_PHASE_IDLE){
       ctrl_x.SetMode(ctrl_x.Control::manual);
       ctrl_y.SetMode(ctrl_y.Control::manual);
       ctrl_orient.SetMode(ctrl_orient.Control::manual);
@@ -74,57 +75,75 @@ void update_position_ctrl(){
       angspd[0] = 0;
       angspd[1] = 0;
       // Serial.println("IDLE");
-    break;
-    case CTRL_PHASE_INIT_POSITION:
-      ctrl_x.Initialize();
-      ctrl_y.Initialize();
-      ctrl_x.SetMode(ctrl_x.Control::automatic);
-      ctrl_y.SetMode(ctrl_y.Control::automatic);
+  }
+  if(ctrl_phase == CTRL_PHASE_INIT_POSITION){
+    ctrl_x.Initialize();
+    ctrl_y.Initialize();
+    ctrl_x.SetMode(ctrl_x.Control::automatic);
+    ctrl_y.SetMode(ctrl_y.Control::automatic);
 
-      // Reset trajectory progress
-      s = 0.0;
-      traj_start_time = 0; // Start time of the movement
-      timer_position_ctrl = 0;
+    // Reset trajectory progress
+    s = 0.0;
+    traj_start_time = 0; // Start time of the movement
+    timer_position_ctrl = 0;
 
-      // Serial.println("INIT POS");
-      ctrl_phase = CTRL_PHASE_POSITION;
-    break;
-    case CTRL_PHASE_POSITION:
-      if(dst(position_robot, position_fin) <= 0.05){
-        ctrl_x.SetMode(ctrl_x.Control::manual);
-        ctrl_y.SetMode(ctrl_y.Control::manual);
+    Serial.println("INIT POS");
+    ctrl_phase = CTRL_PHASE_POSITION;  
+  }
+  if(ctrl_phase == CTRL_PHASE_POSITION){
+    if(dst(position_robot, position_fin) <= 0.05){
+      ctrl_x.SetMode(ctrl_x.Control::manual);
+      ctrl_y.SetMode(ctrl_y.Control::manual);
 
-        ctrl_phase = CTRL_PHASE_INIT_ORIENT_FINAL;
-      }else controller_position(angspd);
-
+      ctrl_phase = CTRL_PHASE_INIT_ORIENT_FINAL;
+    }else controller_position(angspd);
+  }
       // Serial.println("POS");
-    break;
-    case CTRL_PHASE_INIT_ORIENT_FINAL:
-      ctrl_orient.Initialize();
-      ctrl_orient.SetMode(ctrl_orient.Control::automatic);
+  if (ctrl_phase == CTRL_PHASE_INIT_ORIENT_FINAL){
+    ctrl_orient.Initialize();
+    ctrl_orient.SetMode(ctrl_orient.Control::automatic);
 
-      ctrl_phase = CTRL_PHASE_ORIENT_FINAL;
+    ctrl_phase = CTRL_PHASE_ORIENT_FINAL;
       Serial.println("INIT ORIENT");
-    break;
-    case CTRL_PHASE_ORIENT_FINAL:
+  }
+  if (ctrl_phase == CTRL_PHASE_ORIENT_FINAL){
       // Serial.println("ORIENT");
       
-      double d1 = angle_diff(position_robot.theta, position_fin.theta);
-      double d2 = TWO_PI - d1;
-      double d = -min(d1, d2);
-      
-      pos_orient = d;
-      setpoint_orient = 0;
-      if(abs(d) <= radians(3)){
-        ctrl_orient.SetMode(ctrl_orient.Control::manual);
-        ctrl_phase = CTRL_PHASE_IDLE;
-      } else controller_orient(angspd); 
-    break;
+    double d1 = angle_diff(position_robot.theta, position_fin.theta);
+    double d2 = TWO_PI - d1;
+    double d = -min(d1, d2);
+    
+    pos_orient = d;
+    setpoint_orient = 0;
+    if(abs(d) <= radians(5)){
+      ctrl_orient.SetMode(ctrl_orient.Control::manual);
+      ctrl_phase = CTRL_PHASE_IDLE;
+
+      // Turn off motors when becoming idle
+      angspd[0] = 0;
+      angspd[1] = 0;
+    } else controller_orient(angspd); 
   }
   
   set_left_wheel_angspd(angspd[1]);
   set_right_wheel_angspd(angspd[0]);
+  
   timer_position_update = 0;
+
+  // I think UDP as a buffer and calls are blocking if the buffer is full
+  // ToDo: maybe offload fast debugging to second core?
+  if (timer_debug >= 500){
+    String m = String(micros());
+    udp_send_debug_string("x", m, String(position_robot.x), true);
+    udp_send_debug_string("y", m, String(position_robot.y), true);
+    udp_send_debug_string("theta", m, String(position_robot.theta), true);
+    udp_send_debug_string("target_x", m, String(position_fin.x), true);
+    udp_send_debug_string("target_y", m, String(position_fin.y), true);
+    udp_send_debug_string("target_theta", m, String(position_fin.theta), true);
+    udp_send_debug_string("CTRL_PHASE", m, String(ctrl_phase), true);
+
+    timer_debug = 0;
+  }
 }
 
 void controller_position(double output[]){
@@ -220,11 +239,7 @@ void set_desired_position(position_t goal){
   position_init = position_robot;
   position_fin = goal;
 
-  // theta goal counting multiplicity
-  // position_fin.theta = theta_multiplicity(position_init, position_fin.theta);
-  // Serial.println(position_fin.theta);
-
-  ctrl_phase = CTRL_PHASE_INIT_POSITION;
+  if (ctrl_phase != CTRL_PHASE_POSITION) ctrl_phase = CTRL_PHASE_INIT_POSITION;
 }
 
 double dst(position_t p1, position_t p2){
