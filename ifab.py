@@ -144,9 +144,8 @@ if __name__ == '__main__':
     listener = wl.whisperListener_useArgs(args)
 
     # Generazione dei pulsanti statici con i target (testo, percorso_immagine, testo da dire, chiave del dizionario da cui è stato generato)
-    workZone = [{str(key): str(key), 'text': target['text'], 'img_path': target['img_path'], 'say': target['say']} for key, target in conf['workZone'].items()]
-    macchinari = [{str(key): str(key), 'text': target['text'], 'img_path': target['img_path'], 'say': target['say']} for key, target in conf['macchinari'].items()]
-
+    workZone = [{'key': str(key), 'text': target['text'], 'img_path': target['img_path'], 'say': target['say']} for key, target in conf['workZone'].items()]
+    macchinari = [{'key': str(key), 'text': target['text'], 'img_path': target['img_path'], 'say': target['say']} for key, target in conf['macchinari'].items()]
     # Crea l'app Flask e SocketIO con tutte le callback e le informazioni del progetto
     app, socketio, chat_client = create_app(conf['url'], conf['auth'], jobStation_list_top=workZone, machine_list_bot=macchinari,
                                             ttsFun=player.play_text, sttFun=listener.transcribeText,
@@ -155,4 +154,10 @@ if __name__ == '__main__':
     # Ferma il server temporaneo prima di avviare quello Flask
     stop_temp_server()
     # Avvia il server Flask con SocketIO
-    socketio.run(app, host=host, port=port, debug=True, allow_unsafe_werkzeug=True, use_reloader=False)  # Avvia il server Flask con SocketIO disabilitando il riavvio automatico
+    # Avvia il server Flask con SocketIO in un thread separato
+    import threading
+    flask_thread = threading.Thread(target=lambda: socketio.run(app, host=host, port=port, debug=True, allow_unsafe_werkzeug=True, use_reloader=False))
+    flask_thread.daemon = True  # Il thread terminerà quando il programma principale termina
+    flask_thread.start()
+    print("Server Flask avviato in un thread separato")
+    cameraSystem.run()

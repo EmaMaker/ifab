@@ -1,10 +1,10 @@
 import threading
 import tkinter as tk
 from typing import Callable, Optional, Tuple, List, Dict, Any
-from mergedeep import merge
 
 import cv2
 import numpy as np
+from mergedeep import merge
 
 
 class ArUcoDetector:
@@ -405,7 +405,7 @@ class Vision:
                     cv2.putText(error_frame, text, (text_x, text_y), font, font_scale, (0, 255, 255), thickness)
 
                     cv2.imshow(self.warped_windowName, error_frame)
-            return {}, frame if display else None
+            return
 
         all_corners, all_ids, rejected = self.aruco_detector.detect_markers(frame)
         if all_ids is None:
@@ -482,17 +482,26 @@ class Vision:
             except Exception as e:
                 print(f"Error calling sendToRobot callback: {e}")
 
-    def __run__(self):
-        """Starts the main processing loop."""
-        #
-        cv2.namedWindow(self.cameraView_windowsName)
-        # Posiziona le finestre affiancate per evitare sovrapposizioni
+    def setup_windows(self):
+        """Initializes and positions the OpenCV windows."""
+        # Finestra per la visualizzazione della camera
+        cv2.namedWindow(self.cameraView_windowsName, cv2.WINDOW_NORMAL)
         cv2.moveWindow(self.cameraView_windowsName, 20, 20)  # Prima finestra a sinistra
+        cv2.resizeWindow(self.cameraView_windowsName, 640, 480)
 
-        cv2.namedWindow(self.warped_windowName)
-        # Posiziona la seconda finestra allineata al bordo destro dello schermo
-        cv2.moveWindow(self.warped_windowName, self.screen_width - self.warped_output_size[0] - 20,
-                       self.screen_height - self.warped_output_size[1] - 20)  # Finestra allineata a destra
+        # Finestra per la visualizzazione della trasformazione prospettica
+        cv2.namedWindow(self.warped_windowName, cv2.WINDOW_NORMAL)
+        cv2.moveWindow(self.warped_windowName, self.screen_width - self.warped_output_size[0] - 40, 20)  # Finestra allineata a destra
+        cv2.resizeWindow(self.warped_windowName, self.warped_output_size[0], self.warped_output_size[1])
+
+        # Assicuriamoci che le finestre siano visibili
+        cv2.waitKey(100)  # Piccola pausa per assicurarci che l'interfaccia grafica si aggiorni
+
+    def run(self):
+        """Starts the main processing loop."""
+        # Inizializza le finestre nel thread principale
+        if self.display:
+            self.setup_windows()
         while True:
             try:
                 frame = self.get_frame()
@@ -502,10 +511,10 @@ class Vision:
                     break
 
             except (IOError, ValueError) as e:
-                print(f"Error getting frame: {e}")
+                print(f"Error getting frame: {type(e).__name__} - {e}")
                 continue
         self.cleanup()
-        exit(0) # Exit the program when the loop ends
+        exit(0)  # Exit the program when the loop ends
 
     def cleanup(self):
         """Releases the camera and destroys all OpenCV windows."""
@@ -515,24 +524,22 @@ class Vision:
         cv2.destroyAllWindows()
         print("Cleanup complete.")
 
-    def thread_run(self):
-        """Starts the main processing loop in a separate thread."""
-        thread = threading.Thread(target=self.__run__)
-        thread.start()
 
 # Setup del sottosistema di visione, avvia un thread per la visione della camera e ritorna il riferimento alla classe
-def vision_setup(conf:dict, visionStateUpdate:Optional[Callable[[Dict[str, Any]], None]]=None) -> Vision:
+def vision_setup(conf: dict, visionStateUpdate: Optional[Callable[[Dict[str, Any]], None]] = None) -> Vision:
     table = conf['table']
     aruco = table['aruco']
     corners_ids = [
         aruco['top-left'], aruco['top-right'],
-        aruco['bottom-right'], aruco['bottom-left']]
+                   aruco['bottom-right'], aruco['bottom-left']]
     targetMachines = merge({}, conf['workZone'], conf['macchinari'])
+
+    print("Avvio sottosistema di visione")
     transformer = Vision(camera_index=conf["cameraIndex"],
                          marker_corners_ids=corners_ids,
                          width=table['width'], height=table['height'],
                          robot=conf['robot'], targets=targetMachines,
                          visionStateUpdate=visionStateUpdate,
                          display=True)
-    transformer.thread_run()
+    print("└─▶ Starting vision subsystem")
     return transformer
