@@ -13,7 +13,7 @@
     }
   },
   "robot": {
-    "client_addr": "10.42.0.200",
+    "client_addr": "10.42.0.18",
     "client_port": 4242,
     "aruco": 18,
     "x_offset": 0.05,
