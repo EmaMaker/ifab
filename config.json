@@ -3,13 +3,13 @@
   "auth": "Bearer BI91xBzzXppQiRxyBjniBLPFctD8IGqIR0BCmQCyODxSZrZjLX7QJQQJ99BDACi5YpzAArohAAABAZBS4vKQ.DEsKhbDDeYsTi7cHcOgSMV4HrdEnNrJAPp8hTnCv55nxFqtKRfonJQQJ99BDACi5YpzAArohAAABAZBS4AHw",
   "cameraIndex": 0,
   "table": {
-    "width": 1.09,
-    "height": 0.67,
+    "width": 0.88,
+    "height": 0.58,
     "aruco": {
       "top-left": 10,
       "top-right": 12,
-      "bottom-left": 16,
-      "bottom-right": 14
+      "bottom-right": 14,
+      "bottom-left": 16
     }
   },
   "robot": {

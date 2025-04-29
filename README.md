@@ -63,7 +63,7 @@ Il file `config.json` contiene tutte le impostazioni specifiche dell'installazio
 -   **`auth`**: Il token di autenticazione (Bearer token) per il servizio Direct Line.
 -   **`cameraIndex`**: L'indice della webcam da utilizzare per il sistema di visione (es. 0 per la prima webcam rilevata).
 -   **`table`**: Definisce le proprietà del tavolo di lavoro.
-    -   `width`, `height`: Dimensioni fisiche del tavolo in metri.
+    -   `width`, `height`: Dimensioni fisiche del tavolo in metri, **calcolate dai centri degli aruco**.
     -   `aruco`: Mappa gli ID dei marker ArUco agli angoli del tavolo (`top-left`, `top-right`, `bottom-left`, `bottom-right`). Questi marker sono usati per definire il sistema di coordinate del tavolo.
 -   **`robot`**: Configurazione specifica del robot.
     -   `client_addr`, `client_port`: Indirizzo IP e porta per comunicare con il controller del robot.
