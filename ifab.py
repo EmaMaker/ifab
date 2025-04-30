@@ -146,16 +146,19 @@ if __name__ == '__main__':
     # Generazione dei pulsanti statici con i target (testo, percorso_immagine, testo da dire, chiave del dizionario da cui è stato generato)
     workZone = [{'key': str(key), 'text': target['text'], 'img_path': target['img_path'], 'say': target['say']} for key, target in conf['workZone'].items()]
     macchinari = [{'key': str(key), 'text': target['text'], 'img_path': target['img_path'], 'say': target['say']} for key, target in conf['macchinari'].items()]
-    # Crea l'app Flask e SocketIO con tutte le callback e le informazioni del progetto
-    app, socketio, chat_client = create_app(conf['url'], conf['auth'], jobStation_list_top=workZone, machine_list_bot=macchinari,
-                                            ttsFun=player.play_text, sttFun=listener,
-                                            goBotFun=robot_client.set_target, getBotStatusFun=robot_client.botStatus)
 
     if wl.wait_for_model_loading(whisper_ready_event):
         print("Modello whisper caricato con successo")
     else:
         print("Timeout durante il caricamento del modello whisper")
         exit(1)
+
+    # Crea l'app Flask e SocketIO con tutte le callback e le informazioni del progetto
+    app, socketio, chat_client = create_app(conf['url'], conf['auth'], jobStation_list_top=workZone, machine_list_bot=macchinari,
+                                            ttsFun=player.play_text, sttFun=listener,
+                                            goBotFun=robot_client.set_target, getBotStatusFun=robot_client.botStatus)
+
+
 
     # Ferma il server temporaneo prima di avviare quello Flask
     stop_temp_server()
