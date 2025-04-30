@@ -566,3 +566,29 @@ def vision_setup(conf: dict, visionStateUpdate: Optional[Callable[[Dict[str, Any
 
     print("└─▶ Starting vision subsystem")
     return transformer
+
+
+if __name__ == '__main__':
+    # Esegui il server temporaneo per testare la pagina di benvenuto
+    vision = vision_setup({
+        "cameraIndex": 0,
+        "table": {
+            "width": 30.0,
+            "height": 30.0,
+            "aruco": {
+                "top-left": 10,
+                "top-right": 12,
+                "bottom-right": 14,
+                "bottom-left": 16
+            }
+        },
+        "robot": {
+            "aruco": 18,
+            "x_offset": 0,
+            "y_offset": 0,
+            "theta_offset": 0
+        },
+        "workZone": {},
+        "macchinari": {}
+    })
+    vision.run()

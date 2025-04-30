@@ -46,7 +46,7 @@ def start_temporary_server(port=8000, max_retries=5) -> tuple[socketserver.Threa
     while retries < max_retries:
         try:
             httpd = ThreadingServerWithReuse(("", current_port), CustomHandler)
-            print(f"Server temporaneo avviato sulla porta {current_port}")
+            print(f"Server temporaneo avviato sulla porta {current_port}, raggiungibile su http://localhost:{current_port}")
             return httpd, current_port
         except OSError as e:
             if e.errno == 48:  # Address already in use
@@ -94,3 +94,13 @@ def stop_temp_server():
     temp_httpd.shutdown()
     temp_httpd.server_close()
     print("Server temporaneo fermato")
+
+
+if __name__ == '__main__':
+    # Esegui il server temporaneo per testare la pagina di benvenuto
+    run_temp_server(8000)
+    try:
+        while True:
+            pass  # Mantieni il server in esecuzione
+    except KeyboardInterrupt:
+        stop_temp_server()

@@ -9,7 +9,7 @@ import requests
 import websocket
 
 try:
-    from ifabChatLib import StyleBox
+    from chatLib.util import *
 except ImportError:
     from .chatLib.util import *
 

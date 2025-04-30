@@ -373,7 +373,8 @@ if __name__ == '__main__':
     player = ap.audioPlayer_useArgs(args)
 
     # Inizializza STT
-    listener = wl.whisperListener_useArgs(args)
+    listener, listener_ready_event = wl.whisperListener_useArgs(args)
+
 
     # Inizializza il client WebSocket per la comunicazione con il bot
     # Token Bot Ema:
@@ -397,8 +398,10 @@ if __name__ == '__main__':
     ]
     # Crea l'app Flask e SocketIO con tutte le callback e le informazioni del progetto
     app, socketio, chat_client = create_app(url, auth, zone_lavoro, macchinari,
-                                            ttsFun=player.play_text, sttFun=listener.transcribeText,
+                                            ttsFun=player.play_text, sttFun=listener,
                                             goBotFun=newSetPointMock)
+    
+    wl.wait_for_model_loading(listener_ready_event)
 
     # Ferma il server temporaneo prima di avviare quello Flask
     stop_temp_server()
