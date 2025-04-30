@@ -165,7 +165,7 @@ if __name__ == '__main__':
     host, port = flaskFrontEnd_useArgs(args)
 
     # Avvia il server temporaneo di welcome-page
-    run_temp_server(port)
+    #run_temp_server(port)
 
     # Inizio il caricamento in memoria di tutte le risorse dei vari sottemi
     with open(args.config) as f:
@@ -192,7 +192,7 @@ if __name__ == '__main__':
         exit(1)
 
     # Ferma il server temporaneo prima di avviare quello Flask
-    stop_temp_server()
+    #stop_temp_server()
 
     # Crea l'app Flask e SocketIO con tutte le callback e le informazioni del progetto
     app, socketio, chat_client = create_app(conf['url'], conf['auth'], jobStation_list_top=workZone, machine_list_bot=macchinari,
