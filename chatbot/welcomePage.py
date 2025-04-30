@@ -82,6 +82,7 @@ def run_temp_server(port=8000):
         temp_httpd = None
         return None
 
+
 def stop_temp_server():
     """Ferma il server temporaneo di welcome-page"""
     global temp_httpd
@@ -89,9 +90,24 @@ def stop_temp_server():
     if temp_httpd is None:
         print("Nessun server temporaneo in esecuzione.")
         return
-    temp_httpd.shutdown()
-    temp_httpd.server_close()
-    print("Server temporaneo fermato")
+
+    try:
+        # Chiudi il server principale
+        temp_httpd.shutdown()
+        temp_httpd.server_close()
+
+        # Se il server ha un socket, prova a chiudere anche quello
+        if hasattr(temp_httpd, 'socket'):
+            try:
+                temp_httpd.socket.close()
+            except:
+                pass
+
+        temp_httpd = None
+        print("Server temporaneo fermato")
+    except Exception as e:
+        print(f"Errore durante l'arresto del server temporaneo: {e}")
+        temp_httpd = None
 
 
 if __name__ == '__main__':
