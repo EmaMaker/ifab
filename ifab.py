@@ -155,7 +155,7 @@ if __name__ == '__main__':
 
     # Ferma il server temporaneo prima di avviare quello Flask
     stop_temp_server()
-
+    time.sleep(1)  # Attendi un secondo per assicurarti che il server temporaneo sia fermo
     # Crea l'app Flask e SocketIO con tutte le callback e le informazioni del progetto
     app, socketio, chat_client = create_app(conf['url'], conf['auth'], jobStation_list_top=workZone, machine_list_bot=macchinari,
                                             ttsFun=player.play_text, sttFun=listener,
