@@ -3,12 +3,14 @@ import os
 import socketserver
 import threading
 
+# Variabile globale per mantenere il riferimento al server
+temp_httpd = None
 
-def start_temporary_server(port=8000, max_retries=5) -> tuple[socketserver.ThreadingTCPServer, int]:
+def start_temporary_server(port=8000) -> tuple[socketserver.ThreadingTCPServer, int]:
     """
     Avvia un server HTTP temporaneo per mostrare una pagina di benvenuto
     mentre il server principale si sta avviando.
-    Tenta automaticamente altre porte se quella richiesta è occupata.
+    Usa esclusivamente la porta specificata.
     """
 
     class CustomHandler(http.server.SimpleHTTPRequestHandler):
@@ -39,50 +41,46 @@ def start_temporary_server(port=8000, max_retries=5) -> tuple[socketserver.Threa
         allow_reuse_address = True
         daemon_threads = True
 
-    # Tenta di avviare il server su porte diverse se quella predefinita è occupata
-    current_port = port
-    retries = 0
-
-    while retries < max_retries:
-        try:
-            httpd = ThreadingServerWithReuse(("", current_port), CustomHandler)
-            print(f"Server temporaneo avviato sulla porta {current_port}, raggiungibile su http://localhost:{current_port}")
-            return httpd, current_port
-        except OSError as e:
-            if e.errno == 48:  # Address already in use
-                retries += 1
-                current_port = port + retries
-                print(f"La porta {current_port - 1} è occupata, provo con la porta {current_port}")
-            else:
-                raise
-
-    raise OSError(f"Impossibile trovare una porta libera dopo {max_retries} tentativi")
+    try:
+        httpd = ThreadingServerWithReuse(("", port), CustomHandler)
+        print(f"Server temporaneo avviato sulla porta {port}, raggiungibile su http://localhost:{port}")
+        return httpd, port
+    except OSError as e:
+        if e.errno == 48:  # Address already in use
+            raise OSError(f"La porta {port} è già in uso. Specificare una porta diversa.")
+        else:
+            raise
 
 
-# def run_temp_server(httpd):
-#     """Funzione per eseguire il server in un thread separato"""
-#     httpd.serve_forever()
-
-temp_httpd = None  # Variabile globale per il server temporaneo
-
-
-def run_temp_server(port):
-    """Funzione per Avviare il server temporaneo di welcome-page thread separato"""
+def run_temp_server(port=8000):
+    """Funzione per avviare il server temporaneo di welcome-page in un thread separato"""
     global temp_httpd
     try:
-        temp_httpd, used_port = start_temporary_server(port)
-        temp_server_thread = threading.Thread(target=temp_httpd.serve_forever, daemon=True)
+        # Verifica se la porta è già in uso
+        import socket
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        result = s.connect_ex(('localhost', port))
+        s.close()
+
+        if result == 0:
+            print(f"ATTENZIONE: La porta {port} è già in uso. Continuo senza server temporaneo...")
+            return None
+
+        # Avvia il server temporaneo
+        httpd, used_port = start_temporary_server(port)
+        temp_httpd = httpd
+
+        # Avvia il server in un thread separato
+        temp_server_thread = threading.Thread(target=httpd.serve_forever, daemon=True)
         temp_server_thread.start()
         print("Server temporaneo avviato. Caricamento dell'applicazione principale...")
 
-        # Se abbiamo dovuto usare una porta diversa per il server temporaneo, informiamo l'utente
-        if used_port != port:
-            print(f"NOTA: Il server temporaneo usa la porta {used_port} mentre il server principale userà la porta {port}")
+        return used_port
     except Exception as e:
         print(f"Errore nell'avvio del server temporaneo: {e}")
         print("Continuo senza server temporaneo...")
         temp_httpd = None
-
+        return None
 
 def stop_temp_server():
     """Ferma il server temporaneo di welcome-page"""
