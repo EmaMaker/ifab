@@ -170,6 +170,7 @@ def whisperX_spawn_process(model='large-v3', device='auto', compute_type='float3
     ready_event = manager.Event()  # Evento per segnalare quando il modello è pronto
 
     # Crea e avvia il processo
+    ctx = multiprocessing.get_context('spawn')
     process = multiprocessing.Process(
         target=wisperx_process_worker,
         args=(input_queue, response_dict, condition, ready_event, model, device,
