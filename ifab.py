@@ -153,15 +153,14 @@ if __name__ == '__main__':
         print("Timeout durante il caricamento del modello whisper")
         exit(1)
 
+    # Ferma il server temporaneo prima di avviare quello Flask
+    stop_temp_server()
+
     # Crea l'app Flask e SocketIO con tutte le callback e le informazioni del progetto
     app, socketio, chat_client = create_app(conf['url'], conf['auth'], jobStation_list_top=workZone, machine_list_bot=macchinari,
                                             ttsFun=player.play_text, sttFun=listener,
                                             goBotFun=robot_client.set_target, getBotStatusFun=robot_client.botStatus)
 
-
-
-    # Ferma il server temporaneo prima di avviare quello Flask
-    stop_temp_server()
 
     # Avvia il server Flask con SocketIO in un thread separato
     import threading
