@@ -5,13 +5,20 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_socketio import SocketIO
 
-from .chatLib import AudioPlayer as ap
-from .chatLib import WhisperListener as wl
-from .chatLib.text_utils import clean_markdown_for_tts
-from .chatLib.util import *
-from .ifabChatWebSocket import IfabChatWebSocket
-from .welcomePage import *
-
+try:
+    from .chatLib import AudioPlayer as ap
+    from .chatLib import WhisperListener as wl
+    from .chatLib.text_utils import clean_markdown_for_tts
+    from .chatLib.util import *
+    from .ifabChatWebSocket import IfabChatWebSocket
+    from .welcomePage import *
+except ImportError:
+    from chatLib import AudioPlayer as ap
+    from chatLib import WhisperListener as wl
+    from chatLib.text_utils import clean_markdown_for_tts
+    from chatLib.util import *
+    from ifabChatWebSocket import IfabChatWebSocket
+    from welcomePage import *
 """
 Flask WebSocket server per la comunicazione con il bot 
 @param url:                 URL del bot
