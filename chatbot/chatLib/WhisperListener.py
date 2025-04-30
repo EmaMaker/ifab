@@ -1,9 +1,10 @@
 import argparse
+import atexit
 import multiprocessing
 import os
 import uuid
 from typing import Callable
-import atexit
+
 import torch
 
 
@@ -99,7 +100,7 @@ def wisperx_process_worker(input_queue, response_dict, condition, ready_event, m
     try:
         # Creiamo l'oggetto WhisperListener qui dentro il processo
         wL = WhisperListener(model=model, device=device, compute_type=compute_type,
-                           batch_size=batch_size, language=language, gpu_idx=gpu_idx)
+                             batch_size=batch_size, language=language, gpu_idx=gpu_idx)
         # Segnala che il modello è stato caricato con successo
         ready_event.set()
 
@@ -118,7 +119,6 @@ def wisperx_process_worker(input_queue, response_dict, condition, ready_event, m
             response_dict["__error__"] = str(e)
             ready_event.set()
             condition.notify_all()
-
 
 
 def thread_function(input_queue, response_dict, condition, file_path) -> str:
@@ -157,7 +157,7 @@ def wisperx_process_worker(input_queue, response_dict, condition, ready_event, m
 
 
 def whisperX_spawn_process(model='large-v3', device='auto', compute_type='float32',
-                           batch_size=16, language='it', gpu_idx=None) -> tuple[Callable[[str],str], multiprocessing.Event]:
+                           batch_size=16, language='it', gpu_idx=None) -> tuple[Callable[[str], str], multiprocessing.Event]:
     """
     Funzione per spawnare un processo figlio che instanzi whisperX in un processo python differente.
     see: https://github.com/m-bain/whisperX/issues/1124
@@ -221,6 +221,7 @@ def wait_for_model_loading(ready_event, timeout=300):
     """
     return ready_event.wait(timeout=timeout)
 
+
 """ Utility function for Argvparser"""
 
 
@@ -233,7 +234,6 @@ def whisperListener_argsAdd(parser: argparse.ArgumentParser) -> argparse.Argumen
     whisperParser.add_argument("--batch_size", type=int, default=16, help="Batch size for processing [default '%(default)s']")
     whisperParser.add_argument("--compute_type", type=str, default="float32", help="Compute type (float32 or int8) [default '%(default)s']")
     return whisperParser
-
 
 
 def whisperListener_useArgs(args: argparse.Namespace):

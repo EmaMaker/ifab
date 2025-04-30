@@ -162,6 +162,7 @@ if __name__ == '__main__':
 
     # Avvia il server Flask con SocketIO in un thread separato
     import threading
+
     flask_thread = threading.Thread(target=lambda: socketio.run(app, host=host, port=port, debug=True, allow_unsafe_werkzeug=True, use_reloader=False))
     flask_thread.daemon = True  # Il thread terminerà quando il programma principale termina
     flask_thread.start()

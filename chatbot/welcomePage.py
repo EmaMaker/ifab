@@ -1,6 +1,6 @@
-import socketserver
 import http.server
 import os
+import socketserver
 import threading
 
 
@@ -10,6 +10,7 @@ def start_temporary_server(port=8000, max_retries=5) -> tuple[socketserver.Threa
     mentre il server principale si sta avviando.
     Tenta automaticamente altre porte se quella richiesta è occupata.
     """
+
     class CustomHandler(http.server.SimpleHTTPRequestHandler):
         def __init__(self, *args, **kwargs):
             # Imposta la directory principale come la cartella web-client
@@ -51,17 +52,19 @@ def start_temporary_server(port=8000, max_retries=5) -> tuple[socketserver.Threa
             if e.errno == 48:  # Address already in use
                 retries += 1
                 current_port = port + retries
-                print(f"La porta {current_port-1} è occupata, provo con la porta {current_port}")
+                print(f"La porta {current_port - 1} è occupata, provo con la porta {current_port}")
             else:
                 raise
 
     raise OSError(f"Impossibile trovare una porta libera dopo {max_retries} tentativi")
+
 
 # def run_temp_server(httpd):
 #     """Funzione per eseguire il server in un thread separato"""
 #     httpd.serve_forever()
 
 temp_httpd = None  # Variabile globale per il server temporaneo
+
 
 def run_temp_server(port):
     """Funzione per Avviare il server temporaneo di welcome-page thread separato"""

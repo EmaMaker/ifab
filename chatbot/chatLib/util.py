@@ -1,5 +1,4 @@
 import argparse
-import os
 import shutil
 import traceback
 from enum import Enum, auto
@@ -50,6 +49,7 @@ def create_box(string, styleName: StyleBox = StyleBox.Double) -> str:
 def getTermWidth(minRet: int = 0) -> int:
     terminal_size = shutil.get_terminal_size(fallback=(180, 60))  # fallback to width 180, because is bamboo log viewer max size (at 100% zoom)
     return max(terminal_size.columns, minRet)
+
 
 wrapper = TextWrapper(width=getTermWidth(120) - 10)
 

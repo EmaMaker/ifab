@@ -3,6 +3,7 @@
 # -*- coding: utf-8 -*-
 
 import torch
+
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
 
@@ -10,21 +11,18 @@ import argparse
 import time
 
 import argcomplete
-import whisperx
-import gc
 
 """ Import local library """
 import sys
 import os
 
 import certifi
+
 os.environ['SSL_CERT_FILE'] = certifi.where()
 
 # Aggiungi il percorso relativo al sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
 import chatLib.WhisperListener as wl
-
-
 
 if __name__ == '__main__':
     # Parse command-line arguments
@@ -34,8 +32,6 @@ if __name__ == '__main__':
 
     argcomplete.autocomplete(parser)
     args = parser.parse_args()
-
-
 
     # 1. Transcribe with original whisper (batched)
     start_time_creation = time.time()
@@ -54,7 +50,6 @@ if __name__ == '__main__':
     end_time_first_test = time.time()
     time_first_test = end_time_first_test - start_time_first_test
     print(f"Tempo caricamento e processamento del file  WAW nel modello: {time_first_test} secondi")
-
 
     print("Mostro il risultato")
     print(result)  # before alignment

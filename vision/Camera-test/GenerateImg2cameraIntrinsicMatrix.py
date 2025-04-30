@@ -1,10 +1,8 @@
 import os
 
-import numpy as np
-import cv2 as cv
-import glob
-
 import cv2
+import cv2 as cv
+import numpy as np
 from cv2_enumerate_cameras import enumerate_cameras
 
 for camera_info in enumerate_cameras(cv2.CAP_V4L2):

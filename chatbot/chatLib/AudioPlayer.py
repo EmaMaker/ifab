@@ -18,7 +18,7 @@ _tts_lock = threading.Lock()
 class AudioPlayer:
     def __init__(self, voice_model_path):
         global _tts_instance
-        
+
         # Implementazione del pattern Singleton per evitare ricaricamenti multipli del modello TTS
         with _tts_lock:
             if _tts_instance is None:
@@ -27,9 +27,9 @@ class AudioPlayer:
                 print("└─▶ Modello TTS caricato con successo")
             else:
                 print("└─▶ Utilizzo modello TTS già caricato in memoria")
-                
+
             self.voice = _tts_instance
-            
+
         self.stream = None
         self.queue = queue.Queue()
         self.thread = threading.Thread(target=self._play_audio)
@@ -101,7 +101,7 @@ def audioPlayer_argsAdd(parser: argparse.ArgumentParser) -> argparse.ArgumentPar
     audioPlayerParser = parser.add_argument_group("Audio Player for TTS")
     audioLibPath = os.path.join(os.path.dirname(__file__))
     audioPlayerParser.add_argument("--tts_model", type=str, help="Path to the Piper-TTS voice model '*.onnx' [default '%(default)s']",
-                        default=os.path.relpath(os.path.join(audioLibPath, "../tts-model", "it_IT-paola-medium.onnx")))
+                                   default=os.path.relpath(os.path.join(audioLibPath, "../tts-model", "it_IT-paola-medium.onnx")))
     return audioPlayerParser
 
 
