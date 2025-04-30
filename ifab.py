@@ -113,6 +113,44 @@ class RobotController:
             return f"Il robot si trova davanti a: {self.targets[self.target_machine]['text']} (distanza: {distance:.2f} m)"
 
 
+def wait_for_port_available(port, host='localhost', timeout=10):
+    """
+    Attende che una porta si liberi entro un determinato timeout.
+
+    Args:
+        port (int): Numero della porta da verificare
+        host (str): Host su cui controllare la porta
+        timeout (int): Tempo massimo di attesa in secondi
+
+    Returns:
+        bool: True se la porta è disponibile, False se è ancora occupata dopo il timeout
+    """
+    import time
+    import socket as sock
+
+    def is_port_in_use(port, host):
+        with sock.socket(sock.AF_INET, sock.SOCK_STREAM) as s:
+            try:
+                s.bind((host, port))
+                return False
+            except sock.error:
+                return True
+
+    start_time = time.time()
+    port_free = False
+
+    while time.time() - start_time < timeout:
+        if not is_port_in_use(port, host):
+            port_free = True
+            break
+        print(f"La porta {port} è occupata. Attendo che si liberi...")
+        time.sleep(1)
+
+    if not port_free:
+        print(f"Timeout: la porta {port} è ancora occupata dopo {timeout} secondi.")
+
+    return port_free
+
 if __name__ == '__main__':
     # Argomenti da riga di comando di IFAB
     parser = TreeParser(formatter_class=formatHelp, description='Avvio del sistema IFAB')
@@ -161,6 +199,10 @@ if __name__ == '__main__':
                                             ttsFun=player.play_text, sttFun=listener,
                                             goBotFun=robot_client.set_target, getBotStatusFun=robot_client.botStatus)
 
+    # Prima di avviare il server Flask, verifica che la porta sia libera
+    if not wait_for_port_available(port, host):
+        print("Arresto del programma a causa di porta occupata.")
+        exit(1)
 
     # Avvia il server Flask con SocketIO in un thread separato
     import threading
