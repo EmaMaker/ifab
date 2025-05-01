@@ -9,22 +9,23 @@
 #define CTRL_PHASE_IDLE -10
 #define CTRL_PHASE_ORIENT_FINAL 1
 
-#define KP_X 2
+#define KP_X 1.25
 #define KI_X 0
 #define KD_X 0
-#define KP_Y 2
+#define KP_Y 1.25
 #define KI_Y 0
 #define KD_Y 0
-#define KP_ORIENT 0.85
+#define KP_ORIENT 0.65
 #define KI_ORIENT 0
 #define KD_ORIENT 0
-constexpr float V_MAX = 0.15;
-constexpr float A_MAX = 0.1;
+constexpr float V_MAX = 0.3;
+constexpr float A_MAX = 0.2;
 constexpr float Ts = V_MAX / A_MAX;
 
 constexpr float B_FROM_CENTER = 0.02;
 
-constexpr float MAX_ANGULAR_SPEED = 1.2; // rad/s
+constexpr float MAX_ANGULAR_SPEED = 0.8; // rad/s
+constexpr float VALID_DIST_FROM_TARGET = 0.075;
 
 void init_position_ctrl(void);
 void update_position_ctrl(void);

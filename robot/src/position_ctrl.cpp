@@ -39,9 +39,9 @@ void init_position_ctrl(void){
     ctrl_orient.SetSampleTimeUs(sample_time_position_millis*1e3);
 
     // motors are rated at about 200RPM -> 20 rad/s
-    ctrl_x.SetOutputLimits(-25*ODO_WHEEL_RADIUS, 25*ODO_WHEEL_RADIUS);
-    ctrl_y.SetOutputLimits(-25*ODO_WHEEL_RADIUS, 25*ODO_WHEEL_RADIUS);
-    ctrl_orient.SetOutputLimits(-25*ODO_WHEEL_RADIUS, 25*ODO_WHEEL_RADIUS);  
+    ctrl_x.SetOutputLimits(-5, 5);
+    ctrl_y.SetOutputLimits(-5, 5);
+    ctrl_orient.SetOutputLimits(-MAX_ANGULAR_SPEED, MAX_ANGULAR_SPEED);  
 
     timer_position_update = 0;
     timer_position_ctrl = 0;
@@ -91,7 +91,7 @@ void update_position_ctrl(){
     ctrl_phase = CTRL_PHASE_POSITION;  
   }
   if(ctrl_phase == CTRL_PHASE_POSITION){
-    if(dst(position_robot, position_fin) <= 0.02){
+    if(dst(position_robot, position_fin) <= VALID_DIST_FROM_TARGET){
       ctrl_x.SetMode(ctrl_x.Control::manual);
       ctrl_y.SetMode(ctrl_y.Control::manual);
 
@@ -115,7 +115,7 @@ void update_position_ctrl(){
     
     pos_orient = d;
     setpoint_orient = 0;
-    if(abs(d) <= radians(15)){
+    if(abs(d) <= radians(10)){
       ctrl_orient.SetMode(ctrl_orient.Control::manual);
       ctrl_phase = CTRL_PHASE_IDLE;
 
@@ -132,18 +132,18 @@ void update_position_ctrl(){
 
   // I think UDP as a buffer and calls are blocking if the buffer is full
   // ToDo: maybe offload fast debugging to second core?
-  if (timer_debug >= 500){
-    String m = String(micros());
-    udp_send_debug_string("x", m, String(position_robot.x), true);
-    udp_send_debug_string("y", m, String(position_robot.y), true);
-    udp_send_debug_string("theta", m, String(position_robot.theta), true);
-    udp_send_debug_string("target_x", m, String(position_fin.x), true);
-    udp_send_debug_string("target_y", m, String(position_fin.y), true);
-    udp_send_debug_string("target_theta", m, String(position_fin.theta), true);
-    udp_send_debug_string("CTRL_PHASE", m, String(ctrl_phase), true);
+  // if (timer_debug >= 500){
+  //   String m = String(micros());
+  //   udp_send_debug_string("x", m, String(position_robot.x), true);
+  //   udp_send_debug_string("y", m, String(position_robot.y), true);
+  //   udp_send_debug_string("theta", m, String(position_robot.theta), true);
+  //   udp_send_debug_string("target_x", m, String(position_fin.x), true);
+  //   udp_send_debug_string("target_y", m, String(position_fin.y), true);
+  //   udp_send_debug_string("target_theta", m, String(position_fin.theta), true);
+  //   udp_send_debug_string("CTRL_PHASE", m, String(ctrl_phase), true);
 
-    timer_debug = 0;
-  }
+  //   timer_debug = 0;
+  // }
 }
 
 void controller_position(double output[]){
