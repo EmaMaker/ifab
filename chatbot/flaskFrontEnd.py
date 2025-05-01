@@ -275,7 +275,10 @@ def create_app(url: str, auth: str,
                     messageBox("Backend audio STT", f"Trascrizione audio: {stt_audio_text}", StyleBox.Light)
                     backEnd_msg2UI(stt_audio_text, message_id=message_id)  # Invia messaggio trascritto al frontend
                     if stt_fun is not stt_mock:  # Invia messaggio trascritto al bot solo se veramente trascritto
-                        messageBox("Backend audio STT to Bot", "Trascrizione audio inviata al bot", StyleBox.Light)
+                        if getBotStatusFun is not None:
+                            botStatus = getBotStatusFun()  # Chiedi al sistema preposto lo stato del bot per inviarlo al chatbot
+                            stt_audio_text = f"Stato del bot rilevato:\n{botStatus}\n\nDomanda dell'utente:\n{stt_audio_text}"  # Aggiungi lo stato del bot al messaggio
+                        messageBox("Backend audio STT to Bot copilot", stt_audio_text, StyleBox.Light)
                         chat_client.send_message(stt_audio_text)
                     else:
                         time.sleep(1)  # Simula un breve ritardo per il mock

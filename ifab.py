@@ -1,5 +1,6 @@
 import json
 import socket
+import math
 
 from chatbot.flaskFrontEnd import *
 from vision.vision import *
@@ -75,7 +76,7 @@ class RobotController:
             print("Nessun dato da inviare al robot")
             return
 
-        print('Data Send to robot:', toSend)
+        # print('Data Send to robot:', toSend)
         try:
             s = self.get_socket()
             if s:
@@ -87,30 +88,29 @@ class RobotController:
             # Resetta la socket in caso di errore
             self.sock = None
 
+
     def botStatus(self):
         """Restituisce lo stato del robot in base alla sua distanza dal target."""
-        # Verifica se abbiamo un target impostato
-        if self.target_machine is None:
-            return "Nessun target impostato per il robot"
-
-        # Verifica se abbiamo dati del robot e del target
-        if (self.memory['robot']['data'] is None or
-                self.memory['markers'].get(self.target_machine) is None):
-            return f"Il robot si sta muovendo verso: {self.targets[self.target_machine]['text']}"
-
-        # Calcola la distanza tra il robot e il target
-        import math
+        status = ""
         robot_pos = self.memory['robot']['data']["position"]
-        target_pos = self.memory['markers'][self.target_machine]["position"]
-
-        distance = math.dist(robot_pos, target_pos)
-
-        threshold = 0.2  # Soglia di distanza in metri, 20 cm
-
-        if distance > threshold:
-            return f"Il robot si sta dirigendo verso: {self.targets[self.target_machine]['text']} (distanza: {distance:.2f} m)"
+        for mKey, target in self.memory['markers'].items():
+            target_pos = target["position"]
+            distance = math.dist(robot_pos, target_pos)*100
+            status += f"Il robot dista da '{mKey}': {distance:.1f} cm\n"
+        
+        if self.target_machine is None:
+            # Verifica se abbiamo un target impostato
+            status += "Attualmente non c'è nessun target impostato per il robot"
+        elif (self.memory['robot']['data'] is None or self.memory['markers'].get(self.target_machine) is None):
+            # Verifica se abbiamo dati del robot e del target
+            status += f"Il robot si sta muovendo verso: {self.targets[self.target_machine]['text']}"
         else:
-            return f"Il robot si trova davanti a: {self.targets[self.target_machine]['text']} (distanza: {distance:.2f} m)"
+            threshold = 0.2  # Soglia di distanza in metri, 20 cm
+            if distance > threshold:
+                status += f"Il robot si sta dirigendo verso: {self.targets[self.target_machine]['text']}"
+            else:
+                status += f"Il robot si trova davanti a: {self.targets[self.target_machine]['text']}"
+        return status
 
 
 def wait_for_port_available(port, host='localhost', timeout=10):
