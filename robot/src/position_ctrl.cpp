@@ -41,7 +41,7 @@ void init_position_ctrl(void){
     // motors are rated at about 200RPM -> 20 rad/s
     ctrl_x.SetOutputLimits(-25*ODO_WHEEL_RADIUS, 25*ODO_WHEEL_RADIUS);
     ctrl_y.SetOutputLimits(-25*ODO_WHEEL_RADIUS, 25*ODO_WHEEL_RADIUS);
-    ctrl_orient.SetOutputLimits(-25*ODO_WHEEL_RADIUS, 25*ODO_WHEEL_RADIUS);
+    ctrl_orient.SetOutputLimits(-25*ODO_WHEEL_RADIUS, 25*ODO_WHEEL_RADIUS);  
 
     timer_position_update = 0;
     timer_position_ctrl = 0;
@@ -91,7 +91,7 @@ void update_position_ctrl(){
     ctrl_phase = CTRL_PHASE_POSITION;  
   }
   if(ctrl_phase == CTRL_PHASE_POSITION){
-    if(dst(position_robot, position_fin) <= 0.05){
+    if(dst(position_robot, position_fin) <= 0.02){
       ctrl_x.SetMode(ctrl_x.Control::manual);
       ctrl_y.SetMode(ctrl_y.Control::manual);
 
@@ -188,9 +188,19 @@ void controller_position(double output[]){
 
   double in_t[] = {output_x_ff, output_y_ff};
   double out_t[] = {0, 0};
-  double out_w[] = {0, 0};
 
   decouple_t(out_t, in_t);
+
+  // Saturate only the angular speed (omega)
+
+  if (out_t[1] > MAX_ANGULAR_SPEED) {
+    out_t[1] = MAX_ANGULAR_SPEED;
+  }
+
+  else if (out_t[1] < -MAX_ANGULAR_SPEED) {
+    out_t[1] = -MAX_ANGULAR_SPEED;
+  }
+  
   decouple_w(output, out_t);
 }
 
