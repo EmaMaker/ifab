@@ -5,6 +5,7 @@
   "table": {
     "width": 0.88,
     "height": 0.58,
+    "offset_inside": 0.05,
     "aruco": {
       "top-left": 10,
       "top-right": 12,

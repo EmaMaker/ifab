@@ -39,10 +39,18 @@ def create_app(url: str, auth: str,
                machine_list_bot: list[dict[str, str, str, str]],
                sttFun: Callable[[str], str | None] = None,
                ttsFun: Callable[[str], None] = None,
-               goBotFun: Callable[[str], None] = None,
+               goBotFun: Callable[[str|None], None] = None,
                getBotStatusFun: Callable[[], str] = None) -> tuple[
     Flask, SocketIO, IfabChatWebSocket]:
     """Crea e restituisce l'istanza dell'app Flask, socketio e client WebSocket, con tutti i callback"""
+
+    def send_to_copilot(text: str):
+        """Invia un messaggio al bot"""
+        if getBotStatusFun is not None:
+            botStatus = getBotStatusFun()  # Chiedi al sistema preposto lo stato del bot per inviarlo al chatbot
+            text = f"Stato del bot rilevato:\n{botStatus}\n\nDomanda dell'utente:\n{text}"  # Aggiungi lo stato del bot al messaggio
+        messageBox("Invio messaggio al bot", text, StyleBox.Dash_Light)
+        chat_client.send_message(text)
 
     # Callback per gestire l'inoltro dei messaggi dal backend (bot o stt) al frontend
     # se ho un messaggio ID, allora devo aggiornare quel baloon
@@ -105,6 +113,8 @@ def create_app(url: str, auth: str,
     @socketio.on('connect')
     def handle_connect():
         """Gestisce l'evento di connessione di un client Socket.IO"""
+        if goBotFun:
+            goBotFun(None)  # Invia un nuovo target al robot
         messageBox("Nuova connessione frontend", "Avvio nuova conversazione con il bot", StyleBox.Dash_Bold)
         # Invia un messaggio di benvenuto all'utente
         backEnd_msg2UI('Benvenuto! Puoi scrivere un messaggio o registrare un messaggio vocale.', audio_enable=False)
@@ -202,13 +212,8 @@ def create_app(url: str, auth: str,
                     return jsonify({'success': False, 'error': 'Impossibile avviare la conversazione'}), 500
                 # Breve pausa per assicurarsi che la connessione sia stabilita
                 time.sleep(0.5)
-
             # Invia il messaggio al bot in un thread separato per non bloccare la risposta HTTP
-            if getBotStatusFun is not None:
-                botStatus = getBotStatusFun()  # Chiedi al sistema preposto lo stato del bot per inviarlo al chatbot
-                text = f"Stato del bot rilevato:\n{botStatus}\n\nDomanda dell'utente:\n{text}"  # Aggiungi lo stato del bot al messaggio
-            threading.Thread(target=chat_client.send_message, args=(text,)).start()
-            messageBox("Frontend Messaggio di testo", text, StyleBox.Light)
+            threading.Thread(target=send_to_copilot, args=(text,)).start()
             return jsonify({'success': True})
         except Exception as e:
             messageBox("Errore invio", f"Errore durante l'invio del messaggio: {str(e)}", StyleBox.Error)
@@ -275,11 +280,8 @@ def create_app(url: str, auth: str,
                     messageBox("Backend audio STT", f"Trascrizione audio: {stt_audio_text}", StyleBox.Light)
                     backEnd_msg2UI(stt_audio_text, message_id=message_id)  # Invia messaggio trascritto al frontend
                     if stt_fun is not stt_mock:  # Invia messaggio trascritto al bot solo se veramente trascritto
-                        if getBotStatusFun is not None:
-                            botStatus = getBotStatusFun()  # Chiedi al sistema preposto lo stato del bot per inviarlo al chatbot
-                            stt_audio_text = f"Stato del bot rilevato:\n{botStatus}\n\nDomanda dell'utente:\n{stt_audio_text}"  # Aggiungi lo stato del bot al messaggio
-                        messageBox("Backend audio STT to Bot copilot", stt_audio_text, StyleBox.Light)
-                        chat_client.send_message(stt_audio_text)
+                        # Invia il messaggio al bot in un thread separato per non bloccare la risposta HTTP
+                        threading.Thread(target=send_to_copilot, args=(stt_audio_text,)).start()
                     else:
                         time.sleep(1)  # Simula un breve ritardo per il mock
                         messageBox("Backend audio STT to Bot", "Trascrizione audio non inviata al bot, Mock STT", StyleBox.Light)
