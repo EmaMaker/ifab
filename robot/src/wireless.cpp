@@ -28,6 +28,7 @@ bool wifi_connect(){
 
   WiFi.mode(WIFI_STA);
   WiFi.setHostname(hostname);
+  WiFi.config(ip);
 
   WiFi.begin(ssid, pwd);
   int i = 0;
@@ -157,6 +158,6 @@ void udp_send_debug_string(String name, String value, bool plot){
 
 void udp_send_debug_string(String name, String timestamp, String value, bool plot){
     String msg = name + ":" + timestamp + ":" + value + "|" + (plot ? "g" : "");
-    Serial.println(msg);
+    // Serial.println(msg);
     udp_send_string(DEBUG_IP, DEBUG_PORT, msg);
 }

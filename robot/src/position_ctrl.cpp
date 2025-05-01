@@ -87,7 +87,7 @@ void update_position_ctrl(){
     traj_start_time = 0; // Start time of the movement
     timer_position_ctrl = 0;
 
-    Serial.println("INIT POS");
+    // Serial.println("INIT POS");
     ctrl_phase = CTRL_PHASE_POSITION;  
   }
   if(ctrl_phase == CTRL_PHASE_POSITION){
@@ -104,7 +104,7 @@ void update_position_ctrl(){
     ctrl_orient.SetMode(ctrl_orient.Control::automatic);
 
     ctrl_phase = CTRL_PHASE_ORIENT_FINAL;
-      Serial.println("INIT ORIENT");
+    // Serial.println("INIT ORIENT");
   }
   if (ctrl_phase == CTRL_PHASE_ORIENT_FINAL){
       // Serial.println("ORIENT");
@@ -115,7 +115,7 @@ void update_position_ctrl(){
     
     pos_orient = d;
     setpoint_orient = 0;
-    if(abs(d) <= radians(5)){
+    if(abs(d) <= radians(15)){
       ctrl_orient.SetMode(ctrl_orient.Control::manual);
       ctrl_phase = CTRL_PHASE_IDLE;
 

@@ -18,7 +18,7 @@ void setup() {
 
 void loop() {
   ArduinoOTA.handle();
-  udp_receive(); 
+  udp_receive();
 
   update_position_ctrl();
 }

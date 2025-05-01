@@ -4,12 +4,14 @@
 #include <Arduino.h>
 
 #define UDP_PORT 4242
-#define DEBUG_IP "192.168.1.236"
+#define DEBUG_IP "10.42.0.1"
+#define MY_IP "10.42.0.18"
 #define DEBUG_PORT 47269
 
-const char ssid[] = "Radiomarelli";
-const char pwd[] = "Magnadyn3Radiomarell1Philip5@";
+const char ssid[] = "ifab-hotspot";
+const char pwd[] = "ifabifab";
 const char hostname[] = "ifab";
+const IPAddress ip(10,42,0,18);    
 
 bool setup_wifi();
 bool is_wifi_connected();
