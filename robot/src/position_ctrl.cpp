@@ -9,6 +9,8 @@
 elapsedMillis timer_position_update{0};
 elapsedMillis timer_position_ctrl{0};
 elapsedMillis timer_debug{0};
+elapsedMillis timer_orient_ctrl{0};
+
 constexpr unsigned long sample_time_position_millis = 15;
 
 position_t position_robot{0};
@@ -26,6 +28,8 @@ float traj_start_time{0.0};
 double angspd[] = {0.0, 0.0};
 
 int ctrl_phase{CTRL_PHASE_IDLE};
+
+bool first_time_dist{false};
 
 QuickPID ctrl_x(&pos_x, &output_x, &setpoint_x, KP_X, KI_X, KD_X, ctrl_x.pMode::pOnError, ctrl_x.dMode::dOnMeas, ctrl_x.iAwMode::iAwCondition, ctrl_x.Action::direct);
 QuickPID ctrl_y(&pos_y, &output_y, &setpoint_y, KP_Y, KI_Y, KD_Y, ctrl_y.pMode::pOnError, ctrl_y.dMode::dOnMeas, ctrl_y.iAwMode::iAwCondition, ctrl_y.Action::direct);
@@ -86,19 +90,36 @@ void update_position_ctrl(){
     s = 0.0;
     traj_start_time = 0; // Start time of the movement
     timer_position_ctrl = 0;
+    first_time_dist = false;
 
     // Serial.println("INIT POS");
     ctrl_phase = CTRL_PHASE_POSITION;  
   }
   if(ctrl_phase == CTRL_PHASE_POSITION){
-    if(dst(position_robot, position_fin) <= 0.02){
-      ctrl_x.SetMode(ctrl_x.Control::manual);
-      ctrl_y.SetMode(ctrl_y.Control::manual);
 
-      ctrl_phase = CTRL_PHASE_INIT_ORIENT_FINAL;
-    }else controller_position(angspd);
+    if(dst(position_robot, position_fin) <= 0.02){
+
+      if(!first_time_dist){
+        // Initilize the timer for the orientation controller
+        timer_orient_ctrl = 0;
+        first_time_dist = true;
+      }else{
+        if(timer_orient_ctrl > 150){
+        ctrl_x.SetMode(ctrl_x.Control::manual);
+        ctrl_y.SetMode(ctrl_y.Control::manual);
+
+        ctrl_phase = CTRL_PHASE_INIT_ORIENT_FINAL;
+        //position_ctrl_end = false;
+        }
+      }
+    }
+   else {
+      first_time_dist = false;
+      controller_position(angspd);
+    }
   }
-      // Serial.println("POS");
+
+    // Serial.println("POS");
   if (ctrl_phase == CTRL_PHASE_INIT_ORIENT_FINAL){
     ctrl_orient.Initialize();
     ctrl_orient.SetMode(ctrl_orient.Control::automatic);
@@ -115,6 +136,8 @@ void update_position_ctrl(){
     
     pos_orient = d;
     setpoint_orient = 0;
+
+
     if(abs(d) <= radians(15)){
       ctrl_orient.SetMode(ctrl_orient.Control::manual);
       ctrl_phase = CTRL_PHASE_IDLE;
@@ -141,6 +164,7 @@ void update_position_ctrl(){
     udp_send_debug_string("target_y", m, String(position_fin.y), true);
     udp_send_debug_string("target_theta", m, String(position_fin.theta), true);
     udp_send_debug_string("CTRL_PHASE", m, String(ctrl_phase), true);
+    udp_send_debug_string("time orient control", m, String(timer_orient_ctrl), false);
 
     timer_debug = 0;
   }
