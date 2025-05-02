@@ -67,7 +67,7 @@
       "theta_offset": 180,
       "text": "Tagliatrice Laser",
       "img_path": "web-client/images/info.jpg",
-      "say": "Vado dalla Tagliatrice Laser"
+      "say": "Vado alla Tagliatrice Laser"
     },
     "cnc": {
       "aruco": 25,
@@ -85,7 +85,7 @@
       "theta_offset": 0,
       "text": "Plotter",
       "img_path": "web-client/images/commands.jpg",
-      "say": "Sto andando dal Plotter"
+      "say": "Sto andando al Plotter"
     }
   }
 }
