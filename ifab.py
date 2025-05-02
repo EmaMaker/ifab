@@ -92,7 +92,8 @@ class RobotController:
             print("Nessun dato da inviare al robot")
             return
 
-        # print('Data Send to robot:', toSend)
+        toSend['timestamp'] = time.time();
+        #print('Data Send to robot:', toSend)
         try:
             s = self.get_socket()
             if s:
@@ -189,7 +190,7 @@ if __name__ == '__main__':
 
     # Inizializza il client per la comunicazione con il robot
     targetMachines = merge({}, conf['workZone'], conf['macchinari'])
-    robot_client = RobotController(conf['robot']['client_addr'], conf['robot']['client_port'], targets=targetMachines)
+    robot_client = RobotController(conf['robot']['client_addr'], conf['robot']['client_port'], targets=targetMachines, table=conf['table'])
     # Avvio del sottosistema di visione
     cameraSystem = vision_setup(conf, visionStateUpdate=robot_client.update_states)
     # Inizializza TTS

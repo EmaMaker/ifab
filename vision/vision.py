@@ -545,7 +545,7 @@ def vision_setup(conf: dict, visionStateUpdate: Optional[Callable[[Dict[str, Any
     print("Avvio sottosistema di visione")
     transformer = Vision(camera_index=conf["cameraIndex"],
                          marker_corners_ids=corners_ids,
-                         width=table['width'], height=table['height'], offset_inside=table['offset_inside'],
+                         width=table['width'], height=table['height'],
                          robot=conf['robot'], targets=targetMachines,
                          visionStateUpdate=visionStateUpdate,
                          display=True)
