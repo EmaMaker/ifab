@@ -1,7 +1,7 @@
 import cv2
-from cv2_enumerate_cameras import enumerate_cameras
 
-def generateCamera(index:int = 0) -> tuple:
+
+def generateCamera(index: int = 0) -> tuple:
     """
     Detect the index of the camera.
     :return: Camera index
@@ -34,9 +34,9 @@ if __name__ == '__main__':
             cv2.aruco.drawDetectedMarkers(frame, corners, ids)
             for i in range(len(ids)):
                 # Stampa le coordinate dei marker
-                pointList = str(corners[i]).replace('\n','')
+                pointList = str(corners[i]).replace('\n', '')
                 print(f'Marker ID: {ids[i][0]}\tCoordinates: {pointList}')
-            print("-"*60)
+            print("-" * 60)
 
         # Display the captured frame
         cv2.imshow('Camera', frame)

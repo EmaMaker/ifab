@@ -1,4 +1,6 @@
-import threading
+import atexit
+import signal
+import sys
 import tkinter as tk
 from typing import Callable, Optional, Tuple, List, Dict, Any
 
@@ -498,30 +500,37 @@ class Vision:
 
     def run(self):
         """Starts the main processing loop."""
-        # Inizializza le finestre nel thread principale
-        if self.display:
-            self.setup_windows()
-        while True:
-            try:
-                frame = self.get_frame()
-                self.process_frame(frame, display=self.display)
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    print("Exit key 'q' pressed.")
+        try:
+            # Inizializza le finestre nel thread principale
+            if self.display:
+                self.setup_windows()
+            while True:
+                try:
+                    frame = self.get_frame()
+                    self.process_frame(frame, display=self.display)
+                    key = cv2.waitKey(1) & 0xFF
+                    if key == ord('q'):
+                        print("Exit key 'q' pressed.")
+                        break
+                except (IOError, ValueError) as e:
+                    print(f"Error getting frame: {type(e).__name__} - {e}")
+                    continue
+                except KeyboardInterrupt:
+                    print("Interruzione da tastiera rilevata nel ciclo principale.")
                     break
-
-            except (IOError, ValueError) as e:
-                print(f"Error getting frame: {type(e).__name__} - {e}")
-                continue
-        self.cleanup()
-        exit(0)  # Exit the program when the loop ends
+        finally:
+            self.cleanup()
 
     def cleanup(self):
         """Releases the camera and destroys all OpenCV windows."""
-        print("Releasing camera and closing windows...")
-        if self.cam is not None and self.cam.isOpened():
-            self.cam.release()
-        cv2.destroyAllWindows()
-        print("Cleanup complete.")
+        try:
+            print("Releasing camera and closing windows...")
+            if self.cam is not None and self.cam.isOpened():
+                self.cam.release()
+            cv2.destroyAllWindows()
+            print("Cleanup complete.")
+        except Exception as e:
+            print(f"Errore durante la pulizia del sottosistema di visione: {e}")
 
 
 # Setup del sottosistema di visione, avvia un thread per la visione della camera e ritorna il riferimento alla classe
@@ -530,7 +539,7 @@ def vision_setup(conf: dict, visionStateUpdate: Optional[Callable[[Dict[str, Any
     aruco = table['aruco']
     corners_ids = [
         aruco['top-left'], aruco['top-right'],
-                   aruco['bottom-right'], aruco['bottom-left']]
+        aruco['bottom-right'], aruco['bottom-left']]
     targetMachines = merge({}, conf['workZone'], conf['macchinari'])
 
     print("Avvio sottosistema di visione")
@@ -540,5 +549,46 @@ def vision_setup(conf: dict, visionStateUpdate: Optional[Callable[[Dict[str, Any
                          robot=conf['robot'], targets=targetMachines,
                          visionStateUpdate=visionStateUpdate,
                          display=True)
+
+    # Registra la funzione di cleanup con atexit
+    atexit.register(transformer.cleanup)
+
+    # Configura il gestore di segnali per Ctrl+C
+    def signal_handler(sig, frame):
+        print("\nRilevata interruzione da tastiera (Ctrl+C)...")
+        transformer.cleanup()
+        print("Pulizia completata. Uscita in corso...")
+        sys.exit(0)
+
+    # Registra il gestore per SIGINT (Ctrl+C) e SIGTERM
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+
     print("└─▶ Starting vision subsystem")
     return transformer
+
+
+if __name__ == '__main__':
+    # Esegui il server temporaneo per testare la pagina di benvenuto
+    vision = vision_setup({
+        "cameraIndex": 0,
+        "table": {
+            "width": 30.0,
+            "height": 30.0,
+            "aruco": {
+                "top-left": 10,
+                "top-right": 12,
+                "bottom-right": 14,
+                "bottom-left": 16
+            }
+        },
+        "robot": {
+            "aruco": 18,
+            "x_offset": 0,
+            "y_offset": 0,
+            "theta_offset": 0
+        },
+        "workZone": {},
+        "macchinari": {}
+    })
+    vision.run()

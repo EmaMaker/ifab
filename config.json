@@ -5,6 +5,7 @@
   "table": {
     "width": 0.88,
     "height": 0.58,
+    "offset_inside": 0.05,
     "aruco": {
       "top-left": 10,
       "top-right": 12,
@@ -16,16 +17,16 @@
     "client_addr": "10.42.0.18",
     "client_port": 4242,
     "aruco": 18,
-    "x_offset": 0.05,
+    "x_offset": 0.06,
     "y_offset": 0,
-    "theta_offset": 0
+    "theta_offset": 0 
   },
   "workZone": {
     "saldatura": {
       "aruco": 20,
-      "x_offset": 0,
+      "x_offset": 0.2,
       "y_offset": 0,
-      "theta_offset": 0,
+      "theta_offset": 180,
       "text": "Zona saldatura",
       "img_path": "web-client/images/help.jpeg",
       "say": "Vado a saldare"
@@ -52,21 +53,21 @@
   "macchinari": {
     "3d": {
       "aruco": 22,
-      "x_offset": 0,
+      "x_offset": 0.2,
       "y_offset": 0,
-      "theta_offset": 0,
+      "theta_offset": 180,
       "text": "Stampante 3D",
       "img_path": "web-client/images/commands.jpg",
       "say": "Vado verso la Stampante 3D"
     },
     "laser": {
       "aruco": 24,
-      "x_offset": 0,
+      "x_offset": 0.2,
       "y_offset": 0,
-      "theta_offset": 0,
+      "theta_offset": 180,
       "text": "Tagliatrice Laser",
       "img_path": "web-client/images/info.jpg",
-      "say": "Vado dalla Tagliatrice Laser"
+      "say": "Vado alla Tagliatrice Laser"
     },
     "cnc": {
       "aruco": 25,
@@ -84,7 +85,7 @@
       "theta_offset": 0,
       "text": "Plotter",
       "img_path": "web-client/images/commands.jpg",
-      "say": "Sto andando dal Plotter"
+      "say": "Sto andando al Plotter"
     }
   }
 }

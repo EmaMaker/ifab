@@ -1,4 +1,5 @@
 import json
+import math
 import socket
 
 from chatbot.flaskFrontEnd import *
@@ -8,7 +9,7 @@ version = "0.0.1"
 
 
 class RobotController:
-    def __init__(self, client_addr: str, client_port: int, targets: dict):
+    def __init__(self, client_addr: str, client_port: int, targets: dict, table: dict):
         # Configurazione client
         self.client_addr = client_addr
         self.client_port = client_port
@@ -26,6 +27,9 @@ class RobotController:
         self.target_machine = None
         self.targets = targets if targets is not None else {}
 
+        # Dati sul campo fisico
+        self.table = table if table is not None else {}
+
     def get_socket(self):
         """Ottiene una socket valida o ne crea una nuova."""
         if self.sock is None:
@@ -35,7 +39,7 @@ class RobotController:
                 print(f"Errore nella creazione della socket: {e}")
         return self.sock
 
-    def set_target(self, target):
+    def set_target(self, target: str | None):
         """Imposta una nuova macchina target."""
         self.target_machine = target
         self.send_to_robot(robot_data_fresh=False)
@@ -59,23 +63,37 @@ class RobotController:
         # Componi il pacchetto da inviare
         toSend = {}
         if robot_data_fresh and self.memory['robot']['data'] is not None:
-            toSend['robot'] = {
-                "x": self.memory['robot']['data']["position"][0],
-                "y": self.memory['robot']['data']["position"][1],
-                'theta': self.memory['robot']['data']["angle"]
-            }
+            x = self.memory['robot']['data']["position"][0]
+            y = self.memory['robot']['data']["position"][1]
+            theta = self.memory['robot']['data']["angle"]
+            toSend['robot'] = {"x": x, "y": y, 'theta': theta}
 
         if self.memory['markers'].get(self.target_machine) is not None:
-            toSend['target'] = {
-                "x": self.memory['markers'][self.target_machine]["position"][0],
-                "y": self.memory['markers'][self.target_machine]["position"][1],
-                'theta': self.memory['markers'][self.target_machine]["angle"]
-            }
+            x = self.memory['markers'][self.target_machine]["position"][0]
+            y = self.memory['markers'][self.target_machine]["position"][1]
+            theta = self.memory['markers'][self.target_machine]["angle"]
+            x_min = self.table['offset_inside']
+            x_max = self.table['width'] - self.table['offset_inside']
+            y_min = self.table['offset_inside']
+            y_max = self.table['height'] - self.table['offset_inside']
+            if x < x_min or x > x_max or y < y_min or y > y_max:
+                print(f"Il target '{self.target_machine}' è fuori dai limiti dello spazio raggiungibile: {x}, {y}")
+            else:
+                toSend['target'] = {"x": x, "y": y, 'theta': theta}
+
+        if self.target_machine is None and self.memory['robot']['data'] is not None:
+            # Se non abbiamo un target, ma il robot è stato visto almeno una volta, gli diciamo di andare al centro del campo
+            x = self.table['width'] / 2
+            y = self.table['height'] / 2
+            theta = -math.pi / 2
+            toSend['target'] = {"x": x, "y": y, 'theta': theta}
+
         if not toSend:  # Invia i dati usando la socket solo se c'è qualcosa da inviare
             print("Nessun dato da inviare al robot")
             return
 
-        print('Data Send to robot:', toSend)
+        toSend['timestamp'] = time.time();
+        #print('Data Send to robot:', toSend)
         try:
             s = self.get_socket()
             if s:
@@ -89,28 +107,65 @@ class RobotController:
 
     def botStatus(self):
         """Restituisce lo stato del robot in base alla sua distanza dal target."""
-        # Verifica se abbiamo un target impostato
-        if self.target_machine is None:
-            return "Nessun target impostato per il robot"
-
-        # Verifica se abbiamo dati del robot e del target
-        if (self.memory['robot']['data'] is None or
-                self.memory['markers'].get(self.target_machine) is None):
-            return f"Il robot si sta muovendo verso: {self.targets[self.target_machine]['text']}"
-
-        # Calcola la distanza tra il robot e il target
-        import math
+        status = ""
         robot_pos = self.memory['robot']['data']["position"]
-        target_pos = self.memory['markers'][self.target_machine]["position"]
+        for mKey, target in self.memory['markers'].items():
+            target_pos = target["position"]
+            distance = math.dist(robot_pos, target_pos) * 100
+            status += f"Il robot dista da '{mKey}': {distance:.1f} cm\n"
 
-        distance = math.dist(robot_pos, target_pos)
-
-        threshold = 0.2  # Soglia di distanza in metri, 20 cm
-
-        if distance > threshold:
-            return f"Il robot si sta dirigendo verso: {self.targets[self.target_machine]['text']} (distanza: {distance:.2f} m)"
+        if self.target_machine is None:
+            # Verifica se abbiamo un target impostato
+            status += "Attualmente non c'è nessun target impostato per il robot"
+        elif (self.memory['robot']['data'] is None or self.memory['markers'].get(self.target_machine) is None):
+            # Verifica se abbiamo dati del robot e del target
+            status += f"Il robot si sta muovendo verso: {self.targets[self.target_machine]['text']}"
         else:
-            return f"Il robot si trova davanti a: {self.targets[self.target_machine]['text']} (distanza: {distance:.2f} m)"
+            threshold = 0.2  # Soglia di distanza in metri, 20 cm
+            if distance > threshold:
+                status += f"Il robot si sta dirigendo verso: {self.targets[self.target_machine]['text']}"
+            else:
+                status += f"Il robot si trova davanti a: {self.targets[self.target_machine]['text']}"
+        return status
+
+
+def wait_for_port_available(port, host='localhost', timeout=10):
+    """
+    Attende che una porta si liberi entro un determinato timeout.
+
+    Args:
+        port (int): Numero della porta da verificare
+        host (str): Host su cui controllare la porta
+        timeout (int): Tempo massimo di attesa in secondi
+
+    Returns:
+        bool: True se la porta è disponibile, False se è ancora occupata dopo il timeout
+    """
+    import time
+    import socket as sock
+
+    def is_port_in_use(port, host):
+        with sock.socket(sock.AF_INET, sock.SOCK_STREAM) as s:
+            try:
+                s.bind((host, port))
+                return False
+            except sock.error:
+                return True
+
+    start_time = time.time()
+    port_free = False
+
+    while time.time() - start_time < timeout:
+        if not is_port_in_use(port, host):
+            port_free = True
+            break
+        print(f"La porta {port} è occupata. Attendo che si liberi...")
+        time.sleep(1)
+
+    if not port_free:
+        print(f"Timeout: la porta {port} è ancora occupata dopo {timeout} secondi.")
+
+    return port_free
 
 
 if __name__ == '__main__':
@@ -127,7 +182,7 @@ if __name__ == '__main__':
     host, port = flaskFrontEnd_useArgs(args)
 
     # Avvia il server temporaneo di welcome-page
-    run_temp_server(port)
+    # run_temp_server(port)
 
     # Inizio il caricamento in memoria di tutte le risorse dei vari sottemi
     with open(args.config) as f:
@@ -135,29 +190,44 @@ if __name__ == '__main__':
 
     # Inizializza il client per la comunicazione con il robot
     targetMachines = merge({}, conf['workZone'], conf['macchinari'])
-    robot_client = RobotController(conf['robot']['client_addr'], conf['robot']['client_port'], targets=targetMachines)
+    robot_client = RobotController(conf['robot']['client_addr'], conf['robot']['client_port'], targets=targetMachines, table=conf['table'])
     # Avvio del sottosistema di visione
     cameraSystem = vision_setup(conf, visionStateUpdate=robot_client.update_states)
     # Inizializza TTS
     player = ap.audioPlayer_useArgs(args)
     # Inizializza STT
-    listener = wl.whisperListener_useArgs(args)
+    listener, whisper_ready_event = wl.whisperListener_useArgs(args)
 
     # Generazione dei pulsanti statici con i target (testo, percorso_immagine, testo da dire, chiave del dizionario da cui è stato generato)
     workZone = [{'key': str(key), 'text': target['text'], 'img_path': target['img_path'], 'say': target['say']} for key, target in conf['workZone'].items()]
     macchinari = [{'key': str(key), 'text': target['text'], 'img_path': target['img_path'], 'say': target['say']} for key, target in conf['macchinari'].items()]
-    # Crea l'app Flask e SocketIO con tutte le callback e le informazioni del progetto
-    app, socketio, chat_client = create_app(conf['url'], conf['auth'], jobStation_list_top=workZone, machine_list_bot=macchinari,
-                                            ttsFun=player.play_text, sttFun=listener.transcribeText,
-                                            goBotFun=robot_client.set_target, getBotStatusFun=robot_client.botStatus)
+
+    if wl.wait_for_model_loading(whisper_ready_event):
+        print("Modello whisper caricato con successo")
+    else:
+        print("Timeout durante il caricamento del modello whisper")
+        exit(1)
 
     # Ferma il server temporaneo prima di avviare quello Flask
-    stop_temp_server()
-    # Avvia il server Flask con SocketIO
+    # stop_temp_server()
+
+    # Crea l'app Flask e SocketIO con tutte le callback e le informazioni del progetto
+    app, socketio, chat_client = create_app(conf['url'], conf['auth'], jobStation_list_top=workZone, machine_list_bot=macchinari,
+                                            ttsFun=player.play_text, sttFun=listener,
+                                            goBotFun=robot_client.set_target, getBotStatusFun=robot_client.botStatus)
+
+    # Prima di avviare il server Flask, verifica che la porta sia libera
+    # if not wait_for_port_available(port, host):
+    #    print("Arresto del programma a causa di porta occupata.")
+    #    exit(1)
+
     # Avvia il server Flask con SocketIO in un thread separato
     import threading
+
     flask_thread = threading.Thread(target=lambda: socketio.run(app, host=host, port=port, debug=True, allow_unsafe_werkzeug=True, use_reloader=False))
     flask_thread.daemon = True  # Il thread terminerà quando il programma principale termina
     flask_thread.start()
     print("Server Flask avviato in un thread separato")
+
+    # Avvia il sistema di visione nel thread principale
     cameraSystem.run()
