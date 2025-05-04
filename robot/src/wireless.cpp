@@ -32,7 +32,7 @@ bool wifi_connect(){
 
   WiFi.begin(ssid, pwd);
   int i = 0;
-  while (WiFi.waitForConnectResult() != WL_CONNECTED) {
+  while (WiFi.status() != WL_CONNECTED) {
     WiFi.begin(ssid, pwd);
     Serial.println("Retrying connection...");
     Serial.print(i&1);
@@ -112,27 +112,39 @@ void udp_receive(){
     }
     
     if(doc["robot"]){
-      // Extract the JSON objects
-      double robot_x = doc["robot"]["x"];
-      double robot_y = doc["robot"]["y"];
-      double robot_theta = doc["robot"]["theta"];
+      // if(doc["timestamp"] < 0 || doc["timestamp"] > old_robot_timestamp) {
+        // old_robot_timestamp = doc["timestamp"];
+        // Extract the JSON objects
+        double robot_x = doc["robot"]["x"];
+        double robot_y = doc["robot"]["y"];
+        double robot_theta = doc["robot"]["theta"];
 
-      // Serial.println(robot_x);
-      // Serial.println(robot_y);
-      // Serial.println(robot_theta);     
-      set_robot_position({robot_x, robot_y, robot_theta, micros()});
+        // Serial.println(robot_x);
+        // Serial.println(robot_y);
+        // Serial.println(robot_theta);     
+        set_robot_position({robot_x, robot_y, robot_theta, micros()});
+    // }
     }
   
     if(doc["target"]){
-      double target_x = doc["target"]["x"];
-      double target_y = doc["target"]["y"];
-      double target_theta = doc["target"]["theta"];
-      
-      Serial.println(target_x);
-      Serial.println(target_y);
-      Serial.println(target_theta);
-      set_desired_position({target_x, target_y, target_theta});      
+      // if(doc["timestamp"] < 0 || doc["timestamp"] > old_target_timestamp){
+        // old_target_timestamp = doc["timestamp"];
+        double target_x = doc["target"]["x"];
+        double target_y = doc["target"]["y"];
+        double target_theta = doc["target"]["theta"];
+        
+        // Serial.println(target_x);
+        // Serial.println(target_y);
+        // Serial.println(target_theta);
+        set_desired_position({target_x, target_y, target_theta});
+      // } 
     //   udp_send_debug_string("Message", packetBuffer, false);
+    }
+
+    if(doc["face"]){
+      uint8_t face = doc["face"];
+      Serial.println(face);
+      Serial1.write(face);
     }
   }
 }

@@ -7,6 +7,11 @@
 
 void setup() {
   Serial.begin(9600);
+  //UART0 is Serial1
+  // Set pins to default (0,1)
+  Serial1.setTX(0);
+  Serial1.setRX(1);
+  Serial1.begin(115200);
   delay(1000);
 
   pinMode(LED_BUILTIN, OUTPUT);
