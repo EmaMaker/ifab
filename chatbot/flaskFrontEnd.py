@@ -40,8 +40,8 @@ def create_app(url: str, auth: str,
                sttFun: Callable[[str], str | None] = None,
                ttsFun: Callable[[str], None] = None,
                goBotFun: Callable[[str|None], None] = None,
-               getBotStatusFun: Callable[[], str] = None) -> tuple[
-    Flask, SocketIO, IfabChatWebSocket]:
+               getBotStatusFun: Callable[[], str] = None,
+               updateBotFaceFun: Callable[[str], None] = None) -> tuple[Flask, SocketIO, IfabChatWebSocket]:
     """Crea e restituisce l'istanza dell'app Flask, socketio e client WebSocket, con tutti i callback"""
 
     def send_to_copilot(text: str):
@@ -50,6 +50,7 @@ def create_app(url: str, auth: str,
             botStatus = getBotStatusFun()  # Chiedi al sistema preposto lo stato del bot per inviarlo al chatbot
             text = f"Stato del bot rilevato:\n{botStatus}\n\nDomanda dell'utente:\n{text}"  # Aggiungi lo stato del bot al messaggio
         messageBox("Invio messaggio al bot", text, StyleBox.Dash_Light)
+        # TODO: robot thinking face ?
         chat_client.send_message(text)
 
     # Callback per gestire l'inoltro dei messaggi dal backend (bot o stt) al frontend
@@ -65,6 +66,7 @@ def create_app(url: str, auth: str,
                 clean_text = clean_markdown_for_tts(text)
                 messageBox("Send to TTS", clean_text, StyleBox.Dash_Light)
                 ttsFun(clean_text)
+            # TODO: Messaggio ricevuto, fine della faccietta pensante
             socketio.emit('message', message_data)
         else:  #
             messageBox("Send to frontEnd audio transcription to append", text, StyleBox.Dash_Light)
@@ -193,6 +195,20 @@ def create_app(url: str, auth: str,
         return html_content
 
     # Aggiungi una route per gestire la richiesta di invio del messaggio testuale
+    @app.route('/robot-face-update', methods=['POST'])
+    def robot_face_update():
+        """Handle text message submission"""
+        data = request.json
+        if not data or 'text' not in data:
+            return jsonify({'success': False, 'error': 'No text provided'}), 400
+
+        text = data['text']
+        if updateBotFaceFun:
+            updateBotFaceFun(text)
+
+        return jsonify({'success': True})
+
+    # Aggiungi una route per gestire la richiesta di invio del messaggio testuale
     @app.route('/send-message', methods=['POST'])
     def send_message():
         """Handle text message submission"""
@@ -286,10 +302,11 @@ def create_app(url: str, auth: str,
                         time.sleep(1)  # Simula un breve ritardo per il mock
                         messageBox("Backend audio STT to Bot", "Trascrizione audio non inviata al bot, Mock STT", StyleBox.Light)
                         backEnd_msg2UI("Trascrizione audio non inviata al bot, Mock STT")  # Invia messaggio mock al frontend
-
                 else:
-                    messageBox("Backend audio STT", "Errore durante la trascrizione audio", StyleBox.Light)
-                    backEnd_msg2UI("Impossibile trascrivere il messaggio audio", message_id=message_id)
+                    messageBox("Backend audio STT", "Errore durante la trascrizione audio, impossibile distinguere parole", StyleBox.Light)
+                    backEnd_msg2UI("Impossibile trascrivere il messaggio audio, troppo corto o rumoroso", message_id=message_id)
+                    time.sleep(1)  # Breve attesa per non bloccare la macchina a stati
+                    backEnd_msg2UI("Mi spiace ma non ho capito nulla, puoi ripetere da capo?")  # Invia messaggio frontend per ripetere
 
             threading.Thread(target=send_audio_thread, args=(temp_path, message_id,)).start()
             return jsonify({'success': True, 'file_path': audio_url, 'message_id': message_id})

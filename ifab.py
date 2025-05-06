@@ -1,6 +1,7 @@
 import json
 import math
 import socket
+import threading
 
 from chatbot.flaskFrontEnd import *
 from vision.vision import *
@@ -127,6 +128,32 @@ class RobotController:
             else:
                 status += f"Il robot si trova davanti a: {self.targets[self.target_machine]['text']}"
         return status
+    
+    def update_face(self, state):
+        # TODO: Crea la logica con uno switch-match per inviare al robot la faccia da fare
+        # idle, listen, speak
+        #print(state)
+        toSend = {}
+        match state:
+            case "listen":
+                toSend["face"] = 2
+            case "speak":
+                toSend["face"] = 3
+            case _:
+                toSend["face"] = 1
+        print('Data Send to robot:', toSend)
+        try:
+            s = self.get_socket()
+            if s:
+                json_data = json.dumps(toSend, indent=0).replace("\n", "")
+                bytes_data = json_data.encode('utf-8') + b'\0'
+                s.sendto(bytes_data, (self.client_addr, self.client_port))
+        except Exception as e:
+            print(f"Errore nell'invio dei dati: {e}")
+            # Resetta la socket in caso di errore
+            self.sock = None
+        pass
+
 
 
 def wait_for_port_available(port, host='localhost', timeout=10):
@@ -194,7 +221,22 @@ if __name__ == '__main__':
     # Avvio del sottosistema di visione
     cameraSystem = vision_setup(conf, visionStateUpdate=robot_client.update_states)
     # Inizializza TTS
-    player = ap.audioPlayer_useArgs(args)
+    def talkFace():
+        robot_client.update_face("listen")
+    def endTalkFace():
+        robot_client.update_face("idle")
+    player = ap.audioPlayer_useArgs(args, startTalkCallback=talkFace, stopTalkCallback=endTalkFace)
+    # Callback che invia la frase e attende che finisca per stoppare la faccia
+    def ttsTakl_face(text):
+        def sendAndWait(text):
+            player.play_text(text)
+            player.waitEndBuffer()
+            endTalkFace()
+        faceWaitThread = threading.Thread(target=sendAndWait, args=(text,))
+        faceWaitThread.daemon = True  # Il thread terminerà quando il programma principale termina
+        faceWaitThread.start()
+        
+
     # Inizializza STT
     listener, whisper_ready_event = wl.whisperListener_useArgs(args)
 
@@ -213,8 +255,8 @@ if __name__ == '__main__':
 
     # Crea l'app Flask e SocketIO con tutte le callback e le informazioni del progetto
     app, socketio, chat_client = create_app(conf['url'], conf['auth'], jobStation_list_top=workZone, machine_list_bot=macchinari,
-                                            ttsFun=player.play_text, sttFun=listener,
-                                            goBotFun=robot_client.set_target, getBotStatusFun=robot_client.botStatus)
+                                            ttsFun=ttsTakl_face, sttFun=listener,
+                                            goBotFun=robot_client.set_target, getBotStatusFun=robot_client.botStatus, updateBotFaceFun=robot_client.update_face)
 
     # Prima di avviare il server Flask, verifica che la porta sia libera
     # if not wait_for_port_available(port, host):
@@ -222,7 +264,6 @@ if __name__ == '__main__':
     #    exit(1)
 
     # Avvia il server Flask con SocketIO in un thread separato
-    import threading
 
     flask_thread = threading.Thread(target=lambda: socketio.run(app, host=host, port=port, debug=True, allow_unsafe_werkzeug=True, use_reloader=False))
     flask_thread.daemon = True  # Il thread terminerà quando il programma principale termina

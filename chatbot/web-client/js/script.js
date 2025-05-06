@@ -279,6 +279,33 @@ document.addEventListener('DOMContentLoaded', function () {
         setStaticButtonsState(false); // Riabilita i pulsanti statici
     }
 
+    // Send status image of robot face
+    function robotFaceUpdate(text) {
+        if (text === '') return;
+
+        // Send the message to the server
+        fetch('/robot-face-update', {
+            method: 'POST', headers: {
+                'Content-Type': 'application/json'
+            }, body: JSON.stringify({text: text})
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // The response will be handled by the WebSocket connection
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                addErrorMessage("Si è verificato un errore durante l'invio del messaggio di aggiornamento delle facce del robot.", isGui = false);
+                hideLoading();
+            });
+
+    }
+
     // Send a text message
     function sendTextMessage(text) {
         if (text === '') return;
@@ -494,6 +521,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     });
             };
 
+            // Face update when recording started
+            robotFaceUpdate("speak");
             mediaRecorder.start();
 
         } catch (error) {
@@ -505,6 +534,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Stop recording audio
     function stopRecording() {
+        // Face update when recording started
+        robotFaceUpdate("idle");
+
         if (!isRecording) return;
 
         isRecording = false;
