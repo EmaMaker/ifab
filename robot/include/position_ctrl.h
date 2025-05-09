@@ -22,13 +22,14 @@
 #define KD_ORIENT 0
 
 constexpr float MAX_ANGULAR_SPEED = 3; // rad/s
-constexpr float V_MAX = 0.35;
-constexpr float A_MAX = 0.1;
+// constexpr float V_MAX = 0.35;
+constexpr float V_MAX = 0.18;
+constexpr float A_MAX = 0.08;
 constexpr float Ts = V_MAX / A_MAX;
 
 constexpr float B_FROM_CENTER = 0.02;
 
-constexpr float VALID_DIST_FROM_TARGET_POS = 0.05;
+constexpr float VALID_DIST_FROM_TARGET_POS = 0.035;
 constexpr float VALID_DIST_FROM_TARGET_ORIENT = radians(5);
 constexpr float CAMERA_HISTERESIS_POSITION = 0.025;
 constexpr float CAMERA_HISTERESIS_ORIENT = radians(5);
