@@ -86,7 +86,7 @@ class RobotController:
             # Se non abbiamo un target, ma il robot è stato visto almeno una volta, gli diciamo di andare al centro del campo
             x = self.table['width'] / 2
             y = self.table['height'] / 2
-            theta = -math.pi / 2
+            theta = math.pi / 2
             toSend['target'] = {"x": x, "y": y, 'theta': theta}
 
         if not toSend:  # Invia i dati usando la socket solo se c'è qualcosa da inviare
@@ -136,9 +136,9 @@ class RobotController:
         toSend = {}
         match state:
             case "listen":
-                toSend["face"] = 2
-            case "speak":
                 toSend["face"] = 3
+            case "speak":
+                toSend["face"] = 2
             case _:
                 toSend["face"] = 1
         print('Data Send to robot:', toSend)
