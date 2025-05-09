@@ -51,7 +51,7 @@ Il sistema è composto dai seguenti sottosistemi principali, orchestrati dallo s
 
 3.  **Controllo Robot (`ifab.py`, `robot/`)**: Gestisce la comunicazione e l'invio di comandi al robot fisico.
     *   **`RobotController` (classe in `ifab.py`)**: Mantiene lo stato più recente della posizione del robot e dei marker rilevati dal sistema di visione. Quando viene impostato un target (una macchina specifica identificata da un marker Aruco), `RobotController` invia periodicamente la posizione corrente del robot e la posizione del target al robot fisico tramite pacchetti UDP sulla rete locale (configurabile in `config.json`).
-    *   **Firmware Robot (`robot/`)**: Contiene il codice sorgente (PlatformIO/C++) che gira sulla scheda di controllo del robot (probabilmente un ESP32 o simile). Questo codice riceve i pacchetti UDP da `ifab.py` e implementa la logica di navigazione per raggiungere il target specificato, controllando i motori.
+    *   **Firmware Robot (`robot/`)**: Contiene il codice sorgente (PlatformIO/C++) che gira sulla scheda di controllo del robot (Raspberry Pi Pico W per posizione, NodeMCU per display). Questo codice riceve i pacchetti UDP da `ifab.py` e implementa la logica di navigazione per raggiungere il target specificato, controllando i motori.
 
 4.  **Configurazione (`config.json`)**: File JSON che definisce parametri chiave come indirizzi IP, porte, configurazioni delle telecamere, e i target (macchine) riconosciuti con i loro ID marker Aruco associati.
 
